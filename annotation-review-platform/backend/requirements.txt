@@ -1,0 +1,36 @@
+# Web framework
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9
+
+# Database
+sqlalchemy[asyncio]==2.0.30
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+alembic==1.13.1
+
+# Job queue — Celery with Redis broker (chosen over RQ for mature retry/routing/beat support)
+celery[redis]==5.4.0
+redis==5.0.4
+
+# Auth
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Geometry
+shapely==2.0.4
+scipy==1.13.0    # Hungarian algorithm via linear_sum_assignment
+
+# XML parsing (stdlib xml.etree.ElementTree iterparse used; lxml optional for speed)
+lxml==5.2.2
+
+# Misc utilities
+pydantic==2.7.1
+pydantic-settings==2.2.1
+python-dotenv==1.0.1
+aiofiles==23.2.1
+httpx==0.27.0
+orjson==3.10.3
+Levenshtein==0.25.1
+tenacity==8.3.0
+structlog==24.2.0
