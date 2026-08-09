@@ -12,6 +12,14 @@ class UserCreate(BaseModel):
     role: UserRole = UserRole.viewer
 
 
+class PublicUserCreate(BaseModel):
+    """Self-registration payload — requires a valid invite code."""
+    email: str
+    name: str
+    password: str
+    invite_code: str
+
+
 class UserOut(BaseModel):
     id: uuid.UUID
     email: str
