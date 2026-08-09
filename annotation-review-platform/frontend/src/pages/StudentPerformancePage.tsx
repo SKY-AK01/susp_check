@@ -4,7 +4,7 @@
  */
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { studentsApi, runsApi, VerdictBreakdown, RunPerformancePoint } from "../api/client";
+import { studentsApi, RunPerformancePoint } from "../api/client";
 import { VerdictBadge } from "../components/ResultsTable/VerdictBadge";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -13,13 +13,15 @@ import {
 import { ArrowLeft, TrendingUp, Image as ImageIcon, Target } from "lucide-react";
 
 const VERDICT_COLORS: Record<string, string> = {
-  exact_match:            "#22c55e",
-  minor_difference:       "#facc15",
-  significant_difference: "#f97316",
-  missing:                "#ef4444",
-  extra:                  "#a855f7",
-  needs_manual_review:    "#94a3b8",
+  exact_match:            "#16a34a",
+  minor_difference:       "#d97706",
+  significant_difference: "#ea580c",
+  missing:                "#dc2626",
+  extra:                  "#7c3aed",
+  needs_manual_review:    "#6b7280",
 };
+
+const STAT_PASTELS = ["bg-neo-peach", "bg-neo-mint", "bg-neo-lavender", "bg-neo-yellow"];
 
 export default function StudentPerformancePage() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -33,8 +35,9 @@ export default function StudentPerformancePage() {
 
   if (isLoading) {
     return (
-      <div className="p-8">
-        <p className="text-slate-400 text-sm">Loading performance data…</p>
+      <div className="p-8 flex items-center gap-3">
+        <div className="animate-spin rounded-full h-6 w-6 border-4 border-black border-t-transparent" />
+        <p className="text-black font-bold">Loading performance data…</p>
       </div>
     );
   }
@@ -42,14 +45,13 @@ export default function StudentPerformancePage() {
   if (!perf) {
     return (
       <div className="p-8">
-        <p className="text-slate-500 text-sm">Student not found.</p>
+        <p className="text-gray-500 font-semibold">Student not found.</p>
       </div>
     );
   }
 
   const { student, run_history, latest_verdicts, latest_avg_score, total_runs, total_images_reviewed } = perf;
 
-  // Build chart data from run history
   const chartData = run_history.map((r, i) => ({
     name: `Run ${i + 1}`,
     score: r.avg_score ?? 0,
@@ -63,83 +65,85 @@ export default function StudentPerformancePage() {
   }));
 
   const scoreColor =
-    (latest_avg_score ?? 0) >= 80 ? "#22c55e"
-    : (latest_avg_score ?? 0) >= 60 ? "#FFB300"
-    : "#ef4444";
+    (latest_avg_score ?? 0) >= 80 ? "#16a34a"
+    : (latest_avg_score ?? 0) >= 60 ? "#d97706"
+    : "#dc2626";
 
   return (
     <div className="p-8 max-w-5xl space-y-6">
       {/* Back */}
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors"
+        className="flex items-center gap-2 text-black font-bold hover:text-gray-600 text-sm transition-colors"
       >
         <ArrowLeft size={14} /> Back
       </button>
 
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">
+          <h1 className="text-3xl font-black text-black">
             {student.display_name ?? student.username ?? "Unknown Student"}
           </h1>
-          <p className="text-xs text-slate-500 mt-1 font-mono">
+          <p className="text-xs font-semibold text-gray-500 mt-1 font-mono">
             {student.username ?? ""} · Task ID {student.cvat_task_id}
           </p>
         </div>
         {latest_avg_score != null && (
-          <div className="text-right">
-            <p className="text-xs text-slate-500 uppercase tracking-widest mb-0.5">Latest Score</p>
+          <div className="bg-white border-4 border-black rounded-2xl shadow-neo px-6 py-4 text-right shrink-0">
+            <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-1">Latest Score</p>
             <p className="text-5xl font-black font-mono" style={{ color: scoreColor }}>
               {latest_avg_score.toFixed(1)}
             </p>
-            <p className="text-xs text-slate-600 font-mono">/ 100</p>
+            <p className="text-xs text-gray-400 font-mono">/ 100</p>
           </div>
         )}
       </div>
 
-      {/* Summary stat cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Total Runs" value={total_runs} icon={<TrendingUp size={14} />} />
-        <StatCard label="Images Reviewed" value={total_images_reviewed} icon={<ImageIcon size={14} />} />
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <StatCard label="Total Runs" value={total_runs} icon={<TrendingUp size={14} />} bg={STAT_PASTELS[0]} />
+        <StatCard label="Images Reviewed" value={total_images_reviewed} icon={<ImageIcon size={14} />} bg={STAT_PASTELS[1]} />
         <StatCard
           label="Exact Matches"
           value={latest_verdicts.exact_match}
           icon={<Target size={14} />}
-          color="text-green-400"
+          bg={STAT_PASTELS[2]}
+          valueColor="#16a34a"
         />
         <StatCard
           label="Needs Rework"
           value={latest_verdicts.missing + latest_verdicts.significant_difference}
           icon={<Target size={14} />}
-          color="text-red-400"
+          bg={STAT_PASTELS[3]}
+          valueColor="#dc2626"
         />
       </div>
 
       {/* Score trend chart */}
       {chartData.length > 0 && (
-        <div className="bg-slate-900 border border-slate-700 rounded-lg p-5">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">
+        <div className="bg-white border-4 border-black rounded-2xl shadow-neo p-5">
+          <p className="text-xs font-black text-black uppercase tracking-widest mb-4">
             Score Trend Across Runs
           </p>
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={chartData} margin={{ left: 0, right: 16, top: 4, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-              <XAxis dataKey="completed_at" tick={{ fontSize: 10, fill: "#94a3b8" }} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "#94a3b8" }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#d1d5db" />
+              <XAxis dataKey="completed_at" tick={{ fontSize: 10, fill: "#374151", fontWeight: 700 }} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "#374151", fontWeight: 700 }} />
               <Tooltip
-                contentStyle={{ background: "#1e293b", border: "1px solid #334155", fontSize: 12 }}
+                contentStyle={{ background: "#fff", border: "2px solid #000", fontSize: 12, fontWeight: 700 }}
                 formatter={(v: number) => v.toFixed(1)}
               />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Legend wrapperStyle={{ fontSize: 11, fontWeight: 700 }} />
               <Line
                 type="monotone"
                 dataKey="score"
                 name="Avg Score"
-                stroke="#FFB300"
-                strokeWidth={2.5}
-                dot={{ fill: "#FFB300", r: 4 }}
-                activeDot={{ r: 6 }}
+                stroke="#000"
+                strokeWidth={3}
+                dot={{ fill: "#000", r: 5 }}
+                activeDot={{ r: 7 }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -147,18 +151,18 @@ export default function StudentPerformancePage() {
       )}
 
       {/* Latest verdict breakdown */}
-      <div className="bg-slate-900 border border-slate-700 rounded-lg p-5">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">
+      <div className="bg-white border-4 border-black rounded-2xl shadow-neo p-5">
+        <p className="text-xs font-black text-black uppercase tracking-widest mb-4">
           Latest Run — Verdict Breakdown
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {(Object.entries(latest_verdicts) as [string, number][]).map(([v, cnt]) => (
             <div
               key={v}
-              className="flex items-center justify-between border border-slate-700 rounded px-4 py-3 bg-slate-800"
+              className="flex items-center justify-between border-2 border-black rounded-xl px-4 py-3 bg-neo-bg hover:-translate-y-0.5 transition-transform"
             >
               <VerdictBadge verdict={v as any} />
-              <span className="font-mono text-lg font-bold" style={{ color: VERDICT_COLORS[v] ?? "#fff" }}>
+              <span className="font-mono text-lg font-black" style={{ color: VERDICT_COLORS[v] ?? "#111" }}>
                 {cnt}
               </span>
             </div>
@@ -168,14 +172,14 @@ export default function StudentPerformancePage() {
 
       {/* Per-run history table */}
       {run_history.length > 0 && (
-        <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
-          <div className="px-5 py-3 border-b border-slate-700">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+        <div className="bg-white border-4 border-black rounded-2xl shadow-neo overflow-hidden">
+          <div className="px-5 py-3 border-b-4 border-black bg-neo-peach">
+            <p className="text-xs font-black text-black uppercase tracking-wider">
               Run History
             </p>
           </div>
           <table className="w-full text-sm">
-            <thead className="bg-slate-800 text-xs text-slate-400 uppercase">
+            <thead className="bg-neo-bg border-b-2 border-black text-xs text-black uppercase font-black">
               <tr>
                 <th className="px-4 py-3 text-left">Run</th>
                 <th className="px-4 py-3 text-left">Date</th>
@@ -186,43 +190,41 @@ export default function StudentPerformancePage() {
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y-2 divide-black">
               {run_history.map((r: RunPerformancePoint, i: number) => {
                 const issues = r.verdicts.missing + r.verdicts.significant_difference +
                                r.verdicts.extra + r.verdicts.needs_manual_review;
                 return (
-                  <tr key={r.run_id} className="hover:bg-slate-800/50 transition-colors">
-                    <td className="px-4 py-3 text-slate-400 font-mono text-xs">
-                      Run {i + 1}
-                    </td>
-                    <td className="px-4 py-3 text-slate-400 text-xs">
+                  <tr key={r.run_id} className="hover:bg-neo-bg transition-colors">
+                    <td className="px-4 py-3 text-gray-500 font-black font-mono text-xs">Run {i + 1}</td>
+                    <td className="px-4 py-3 text-gray-600 text-xs font-semibold">
                       {r.run_completed_at
                         ? new Date(r.run_completed_at).toLocaleDateString()
                         : "—"}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-xs text-slate-300">
+                    <td className="px-4 py-3 text-right font-black font-mono text-xs text-black">
                       {r.total_images}
                     </td>
                     <td className="px-4 py-3 text-right">
                       {r.avg_score != null ? (
                         <span
-                          className="font-mono font-bold text-sm"
-                          style={{ color: r.avg_score >= 80 ? "#22c55e" : r.avg_score >= 60 ? "#FFB300" : "#ef4444" }}
+                          className="font-mono font-black text-sm"
+                          style={{ color: r.avg_score >= 80 ? "#16a34a" : r.avg_score >= 60 ? "#d97706" : "#dc2626" }}
                         >
                           {r.avg_score.toFixed(1)}
                         </span>
                       ) : "—"}
                     </td>
-                    <td className="px-4 py-3 text-right text-xs font-mono text-green-400">
+                    <td className="px-4 py-3 text-right text-xs font-black font-mono text-green-600">
                       {r.verdicts.exact_match}
                     </td>
-                    <td className="px-4 py-3 text-right text-xs font-mono text-red-400">
+                    <td className="px-4 py-3 text-right text-xs font-black font-mono text-red-600">
                       {issues}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link
                         to={`/runs/${r.run_id}/results?student_id=${studentId}`}
-                        className="text-xs text-amber-400 hover:text-amber-300"
+                        className="text-xs font-black text-black underline decoration-2 underline-offset-2 hover:text-gray-600"
                       >
                         View →
                       </Link>
@@ -236,8 +238,8 @@ export default function StudentPerformancePage() {
       )}
 
       {run_history.length === 0 && (
-        <div className="border border-slate-700 rounded-lg p-10 text-center">
-          <p className="text-slate-500 text-sm">
+        <div className="border-4 border-black rounded-2xl p-10 text-center bg-white shadow-neo">
+          <p className="text-black font-bold text-sm">
             No comparison runs yet. Upload a CVAT ZIP and trigger a run to see performance data.
           </p>
         </div>
@@ -247,20 +249,21 @@ export default function StudentPerformancePage() {
 }
 
 function StatCard({
-  label, value, icon, color = "text-slate-100",
+  label, value, icon, bg = "bg-white", valueColor = "#111",
 }: {
   label: string;
   value: number;
   icon: React.ReactNode;
-  color?: string;
+  bg?: string;
+  valueColor?: string;
 }) {
   return (
-    <div className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-4">
-      <div className="flex items-center gap-2 text-slate-500 text-xs mb-2">
+    <div className={`${bg} border-4 border-black rounded-2xl px-4 py-4 shadow-neo`}>
+      <div className="flex items-center gap-2 text-black text-xs font-black mb-2 uppercase tracking-wider">
         {icon}
-        <span className="uppercase tracking-widest">{label}</span>
+        <span>{label}</span>
       </div>
-      <p className={`text-3xl font-black font-mono ${color}`}>{value}</p>
+      <p className="text-3xl font-black font-mono" style={{ color: valueColor }}>{value}</p>
     </div>
   );
 }

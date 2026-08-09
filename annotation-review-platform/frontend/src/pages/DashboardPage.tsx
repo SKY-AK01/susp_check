@@ -19,6 +19,9 @@ const VERDICT_COLORS: Record<string, string> = {
   needs_manual_review:    "#94a3b8",
 };
 
+// Pastel card backgrounds cycling for the verdict summary cards
+const CARD_PASTELS = ["bg-neo-mint", "bg-neo-yellow", "bg-neo-peach", "bg-neo-lavender", "bg-neo-pink", "bg-white"];
+
 export default function DashboardPage() {
   const { projectId } = useParams<{ projectId: string }>();
 
@@ -62,28 +65,28 @@ export default function DashboardPage() {
 
   return (
     <div className="p-8 max-w-6xl space-y-8">
-      <h1 className="text-2xl font-semibold text-slate-100">Dashboard</h1>
+      <h1 className="text-3xl font-black text-black tracking-tight">Dashboard</h1>
 
       {isLoading && (
-        <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-400 mb-4"></div>
-          <p>Loading dashboard data...</p>
+        <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+          <div className="animate-spin rounded-full h-10 w-10 border-4 border-black border-t-transparent mb-4"></div>
+          <p className="font-bold">Loading dashboard data...</p>
         </div>
       )}
 
       {isEmpty && (
-        <div className="bg-slate-900 border border-slate-700 rounded-lg p-12 text-center max-w-2xl mx-auto mt-12">
-          <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-            <BarChartIcon className="w-8 h-8 text-slate-500" />
+        <div className="bg-white border-4 border-black rounded-2xl shadow-neo p-12 text-center max-w-2xl mx-auto mt-12">
+          <div className="w-16 h-16 bg-neo-yellow border-4 border-black rounded-full flex items-center justify-center mx-auto mb-4 shadow-neo-sm">
+            <BarChartIcon className="w-8 h-8 text-black" />
           </div>
-          <h2 className="text-xl font-medium text-slate-200 mb-2">No comparison runs yet</h2>
-          <p className="text-slate-400 text-sm mb-8 max-w-md mx-auto">
-            The dashboard is empty because there are no completed comparison runs for this project. 
+          <h2 className="text-2xl font-black text-black mb-2">No comparison runs yet</h2>
+          <p className="text-gray-700 font-semibold text-sm mb-8 max-w-md mx-auto">
+            The dashboard is empty because there are no completed comparison runs for this project.
             Upload a CVAT ZIP and trigger a comparison run to view metrics and student performance.
           </p>
           <Link
             to={`/projects/${projectId}`}
-            className="inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-slate-900 font-semibold text-sm rounded px-6 py-2.5 transition-colors shadow-[2px_2px_0px_#1a1a1a]"
+            className="inline-flex items-center gap-2 bg-black hover:bg-gray-800 text-white font-black text-sm rounded-full px-6 py-3 transition-transform hover:-translate-y-1 shadow-neo"
           >
             Go to Project Details
           </Link>
@@ -93,159 +96,157 @@ export default function DashboardPage() {
       {!isLoading && !isEmpty && (
         <>
           {/* Summary cards */}
-      {Object.keys(verdictTotals).length > 0 && (
-        <section>
-          <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-3">
-            Overall (latest run)
-          </h2>
-          <div className="flex flex-wrap gap-3">
-            {Object.entries(verdictTotals).map(([v, cnt]) => (
-              <div
-                key={v}
-                className="bg-slate-900 border border-slate-700 rounded-lg px-5 py-4 min-w-[140px]"
-              >
-                <p className="text-xs text-slate-400">{v.replace(/_/g, " ")}</p>
-                <p className="text-3xl font-bold mt-1" style={{ color: VERDICT_COLORS[v] ?? "#fff" }}>
-                  {cnt}
-                </p>
+          {Object.keys(verdictTotals).length > 0 && (
+            <section>
+              <h2 className="text-xs font-black text-black uppercase tracking-widest mb-4">
+                Overall (latest run)
+              </h2>
+              <div className="flex flex-wrap gap-4">
+                {Object.entries(verdictTotals).map(([v, cnt], i) => (
+                  <div
+                    key={v}
+                    className={`${CARD_PASTELS[i % CARD_PASTELS.length]} border-4 border-black rounded-2xl shadow-neo px-6 py-5 min-w-[150px] hover:-translate-y-1 transition-transform`}
+                  >
+                    <p className="text-xs font-black text-black uppercase tracking-wide">{v.replace(/_/g, " ")}</p>
+                    <p className="text-4xl font-black mt-2 text-black">{cnt}</p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </section>
-      )}
+            </section>
+          )}
 
-      {/* Label error rates — §18.4 */}
-      {labelErrors?.rates?.length > 0 && (
-        <section>
-          <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-3">
-            Error Rate by Label
-          </h2>
-          <div className="bg-slate-900 border border-slate-700 rounded-lg p-4">
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart
-                data={labelErrors.rates.slice(0, 20)}
-                layout="vertical"
-                margin={{ left: 120, right: 20, top: 4, bottom: 4 }}
-              >
-                <XAxis type="number" domain={[0, 1]} tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
-                  tick={{ fontSize: 11, fill: "#94a3b8" }} />
-                <YAxis type="category" dataKey="label_name" width={120}
-                  tick={{ fontSize: 11, fill: "#cbd5e1" }} />
-                <Tooltip
-                  formatter={(v: number) => `${(v * 100).toFixed(1)}%`}
-                  contentStyle={{ background: "#1e293b", border: "1px solid #334155", fontSize: 12 }}
-                />
-                <Bar dataKey="error_rate" radius={[0, 3, 3, 0]}>
-                  {labelErrors.rates.slice(0, 20).map((entry: { error_rate: number }, i: number) => (
-                    <Cell
-                      key={i}
-                      fill={entry.error_rate > 0.3 ? "#ef4444" : entry.error_rate > 0.15 ? "#f97316" : "#3b82f6"}
+          {/* Label error rates */}
+          {labelErrors?.rates?.length > 0 && (
+            <section>
+              <h2 className="text-xs font-black text-black uppercase tracking-widest mb-4">
+                Error Rate by Label
+              </h2>
+              <div className="bg-white border-4 border-black rounded-2xl shadow-neo p-5">
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart
+                    data={labelErrors.rates.slice(0, 20)}
+                    layout="vertical"
+                    margin={{ left: 120, right: 20, top: 4, bottom: 4 }}
+                  >
+                    <XAxis type="number" domain={[0, 1]} tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
+                      tick={{ fontSize: 11, fill: "#111" }} />
+                    <YAxis type="category" dataKey="label_name" width={120}
+                      tick={{ fontSize: 11, fill: "#111" }} />
+                    <Tooltip
+                      formatter={(v: number) => `${(v * 100).toFixed(1)}%`}
+                      contentStyle={{ background: "#fff", border: "2px solid #000", fontSize: 12, fontWeight: 700 }}
                     />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-      )}
+                    <Bar dataKey="error_rate" radius={[0, 4, 4, 0]}>
+                      {labelErrors.rates.slice(0, 20).map((entry: { error_rate: number }, i: number) => (
+                        <Cell
+                          key={i}
+                          fill={entry.error_rate > 0.3 ? "#ef4444" : entry.error_rate > 0.15 ? "#f97316" : "#22c55e"}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </section>
+          )}
 
-      {/* Reviewer activity — §18.5 */}
-      {reviewerActivity?.activity?.length > 0 && (
-        <section>
-          <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-3">
-            Reviewer Activity
-          </h2>
-          <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-800 text-xs text-slate-400 uppercase">
-                <tr>
-                  <th className="px-4 py-3 text-left">Reviewer</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800">
-                {reviewerActivity.activity.map((r: { reviewer_name: string; actions_count: number; reviewer_id: string }) => (
-                  <tr key={r.reviewer_id} className="hover:bg-slate-800/50">
-                    <td className="px-4 py-3 text-slate-200">{r.reviewer_name}</td>
-                    <td className="px-4 py-3 text-right text-slate-300 font-mono">
-                      {r.actions_count}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
+          {/* Reviewer activity */}
+          {reviewerActivity?.activity?.length > 0 && (
+            <section>
+              <h2 className="text-xs font-black text-black uppercase tracking-widest mb-4">
+                Reviewer Activity
+              </h2>
+              <div className="bg-white border-4 border-black rounded-2xl shadow-neo overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-neo-peach border-b-4 border-black text-xs text-black uppercase font-black">
+                    <tr>
+                      <th className="px-4 py-3 text-left">Reviewer</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y-2 divide-black">
+                    {reviewerActivity.activity.map((r: { reviewer_name: string; actions_count: number; reviewer_id: string }) => (
+                      <tr key={r.reviewer_id} className="hover:bg-neo-bg transition-colors">
+                        <td className="px-4 py-3 text-black font-semibold">{r.reviewer_name}</td>
+                        <td className="px-4 py-3 text-right text-black font-black font-mono">
+                          {r.actions_count}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
 
-      {/* Student leaderboard */}
-      {leaderboard?.entries != null && leaderboard.entries.length > 0 && (
-        <section>
-          <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-3">
-            Student Leaderboard — Latest Run
-          </h2>
-          <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-800 text-xs text-slate-400 uppercase">
-                <tr>
-                  <th className="px-4 py-3 text-left w-8">#</th>
-                  <th className="px-4 py-3 text-left">Student</th>
-                  <th className="px-4 py-3 text-right">Avg Score</th>
-                  <th className="px-4 py-3 text-right">Exact %</th>
-                  <th className="px-4 py-3 text-right">Needs Rework</th>
-                  <th className="px-4 py-3 text-right">Images</th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800">
-                {leaderboard!.entries.map((e: LeaderboardEntry) => (
-                  <tr key={e.student.id} className="hover:bg-slate-800/50 transition-colors">
-                    <td className="px-4 py-3 text-slate-500 font-mono text-xs">{e.rank}</td>
-                    <td className="px-4 py-3">
-                      <p className="text-slate-200 font-medium text-sm">
-                        {e.student.display_name ?? e.student.username ?? "—"}
-                      </p>
-                      <p className="text-slate-600 font-mono text-xs">{e.student.username}</p>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {e.latest_avg_score != null ? (
-                        <span
-                          className="font-mono font-bold text-base"
-                          style={{
-                            color: e.latest_avg_score >= 80 ? "#22c55e"
-                              : e.latest_avg_score >= 60 ? "#FFB300" : "#ef4444"
-                          }}
-                        >
-                          {e.latest_avg_score.toFixed(1)}
-                        </span>
-                      ) : <span className="text-slate-600">—</span>}
-                    </td>
-                    <td className="px-4 py-3 text-right text-xs font-mono text-slate-300">
-                      {e.exact_match_pct != null ? `${e.exact_match_pct}%` : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right text-xs font-mono">
-                      <span className={e.needs_rework_count > 0 ? "text-red-400" : "text-slate-600"}>
-                        {e.needs_rework_count}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right text-xs font-mono text-slate-400">
-                      {e.total_images}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        to={`/students/${e.student.id}`}
-                        className="text-xs text-amber-400 hover:text-amber-300 font-medium"
-                      >
-                        Track →
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
+          {/* Student leaderboard */}
+          {leaderboard?.entries != null && leaderboard.entries.length > 0 && (
+            <section>
+              <h2 className="text-xs font-black text-black uppercase tracking-widest mb-4">
+                Student Leaderboard — Latest Run
+              </h2>
+              <div className="bg-white border-4 border-black rounded-2xl shadow-neo overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-neo-mint border-b-4 border-black text-xs text-black uppercase font-black">
+                    <tr>
+                      <th className="px-4 py-3 text-left w-8">#</th>
+                      <th className="px-4 py-3 text-left">Student</th>
+                      <th className="px-4 py-3 text-right">Avg Score</th>
+                      <th className="px-4 py-3 text-right">Exact %</th>
+                      <th className="px-4 py-3 text-right">Needs Rework</th>
+                      <th className="px-4 py-3 text-right">Images</th>
+                      <th className="px-4 py-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y-2 divide-black">
+                    {leaderboard!.entries.map((e: LeaderboardEntry) => (
+                      <tr key={e.student.id} className="hover:bg-neo-bg transition-colors">
+                        <td className="px-4 py-3 text-gray-500 font-black font-mono text-xs">{e.rank}</td>
+                        <td className="px-4 py-3">
+                          <p className="text-black font-black text-sm">
+                            {e.student.display_name ?? e.student.username ?? "—"}
+                          </p>
+                          <p className="text-gray-500 font-mono text-xs">{e.student.username}</p>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {e.latest_avg_score != null ? (
+                            <span
+                              className="font-mono font-black text-base"
+                              style={{
+                                color: e.latest_avg_score >= 80 ? "#16a34a"
+                                  : e.latest_avg_score >= 60 ? "#d97706" : "#dc2626"
+                              }}
+                            >
+                              {e.latest_avg_score.toFixed(1)}
+                            </span>
+                          ) : <span className="text-gray-400">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-right text-xs font-black font-mono text-black">
+                          {e.exact_match_pct != null ? `${e.exact_match_pct}%` : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-right text-xs font-black font-mono">
+                          <span className={e.needs_rework_count > 0 ? "text-red-600" : "text-gray-400"}>
+                            {e.needs_rework_count}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right text-xs font-mono text-black font-bold">
+                          {e.total_images}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Link
+                            to={`/students/${e.student.id}`}
+                            className="text-xs font-black text-black underline decoration-2 underline-offset-2 hover:text-gray-600"
+                          >
+                            Track →
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
         </>
       )}
     </div>

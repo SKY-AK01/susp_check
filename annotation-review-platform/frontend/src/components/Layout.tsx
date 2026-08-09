@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, FolderOpen, LogOut } from "lucide-react";
+import { FolderOpen, LogOut } from "lucide-react";
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -10,11 +10,11 @@ export default function Layout() {
   }
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen bg-neo-bg">
       {/* Sidebar */}
-      <aside className="w-56 bg-slate-900 border-r border-slate-700 flex flex-col">
-        <div className="p-4 border-b border-slate-700">
-          <span className="text-sm font-semibold text-slate-300 uppercase tracking-widest">
+      <aside className="w-56 bg-white border-r-4 border-black flex flex-col">
+        <div className="p-4 border-b-4 border-black">
+          <span className="text-sm font-black text-black uppercase tracking-widest">
             Annotation Review
           </span>
         </div>
@@ -22,20 +22,20 @@ export default function Layout() {
           <NavLink
             to="/projects"
             className={({ isActive }) =>
-              `flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${
+              `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold border-2 transition-all ${
                 isActive
-                  ? "bg-blue-600 text-white"
-                  : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  ? "bg-neo-lavender border-black shadow-neo-sm text-black"
+                  : "border-transparent text-gray-600 hover:bg-neo-peach hover:border-black hover:shadow-neo-sm hover:text-black"
               }`
             }
           >
             <FolderOpen size={16} /> Projects
           </NavLink>
         </nav>
-        <div className="p-3 border-t border-slate-700">
+        <div className="p-3 border-t-4 border-black">
           <button
             onClick={logout}
-            className="flex items-center gap-2 px-3 py-2 rounded text-sm text-slate-400 hover:text-white hover:bg-slate-800 w-full transition-colors"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold border-2 border-transparent text-gray-600 hover:bg-neo-pink hover:border-black hover:shadow-neo-sm hover:text-black w-full transition-all"
           >
             <LogOut size={16} /> Sign out
           </button>
@@ -43,7 +43,7 @@ export default function Layout() {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 overflow-y-auto bg-slate-950">
+      <main className="flex-1 overflow-y-auto bg-neo-bg">
         <Outlet />
       </main>
     </div>

@@ -4,6 +4,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { projectsApi, Project } from "../api/client";
 import { Plus, ChevronRight } from "lucide-react";
 
+const CARD_PASTELS = [
+  "bg-neo-peach", "bg-neo-mint", "bg-neo-lavender",
+  "bg-neo-yellow", "bg-neo-pink", "bg-white",
+];
+
 export default function ProjectsPage() {
   const qc = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
@@ -25,34 +30,39 @@ export default function ProjectsPage() {
 
   return (
     <div className="p-8 max-w-4xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-slate-100">Projects</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-black text-black">Projects</h1>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded px-4 py-2 transition-colors"
+          className="flex items-center gap-2 bg-black hover:bg-gray-800 text-white font-black text-sm rounded-full px-5 py-2.5 transition-transform hover:-translate-y-1 shadow-neo"
         >
           <Plus size={14} /> New Project
         </button>
       </div>
 
-      {isLoading && <p className="text-slate-400 text-sm">Loading…</p>}
+      {isLoading && (
+        <div className="flex items-center gap-3 text-black font-bold">
+          <div className="animate-spin rounded-full h-5 w-5 border-4 border-black border-t-transparent" />
+          Loading…
+        </div>
+      )}
 
       {data && (
         <>
-          <div className="space-y-2">
-            {data.items.map((p: Project) => (
+          <div className="space-y-3">
+            {data.items.map((p: Project, i: number) => (
               <Link
                 key={p.id}
                 to={`/projects/${p.id}`}
-                className="flex items-center justify-between bg-slate-900 border border-slate-700 rounded-lg px-5 py-4 hover:border-blue-500 transition-colors group"
+                className={`flex items-center justify-between ${CARD_PASTELS[i % CARD_PASTELS.length]} border-4 border-black rounded-2xl px-5 py-4 shadow-neo hover:-translate-y-1 transition-transform group`}
               >
                 <div>
-                  <p className="text-sm font-medium text-slate-100">{p.name}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-base font-black text-black">{p.name}</p>
+                  <p className="text-xs font-semibold text-gray-600 mt-0.5">
                     {p.project_type} · GT mode: {p.gt_mode_default}
                   </p>
                 </div>
-                <ChevronRight size={16} className="text-slate-500 group-hover:text-slate-300" />
+                <ChevronRight size={18} className="text-black group-hover:translate-x-1 transition-transform" />
               </Link>
             ))}
           </div>
@@ -62,16 +72,16 @@ export default function ProjectsPage() {
             <button
               disabled={offset === 0}
               onClick={() => setOffset(Math.max(0, offset - LIMIT))}
-              className="text-xs text-slate-400 hover:text-white disabled:opacity-30 px-3 py-1 border border-slate-700 rounded"
+              className="text-sm font-black text-black disabled:opacity-30 px-4 py-2 border-2 border-black rounded-full hover:bg-black hover:text-white transition-colors"
             >
-              Previous
+              ← Previous
             </button>
             <button
               disabled={!data.has_more}
               onClick={() => setOffset(offset + LIMIT)}
-              className="text-xs text-slate-400 hover:text-white disabled:opacity-30 px-3 py-1 border border-slate-700 rounded"
+              className="text-sm font-black text-black disabled:opacity-30 px-4 py-2 border-2 border-black rounded-full hover:bg-black hover:text-white transition-colors"
             >
-              Next
+              Next →
             </button>
           </div>
         </>
@@ -107,55 +117,59 @@ function CreateProjectModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <form
         onSubmit={submit}
-        className="bg-slate-900 border border-slate-700 rounded-lg p-6 w-full max-w-md space-y-4"
+        className="bg-white border-4 border-black rounded-2xl shadow-neo p-6 w-full max-w-md space-y-5"
       >
-        <h2 className="text-lg font-semibold text-slate-100">New Project</h2>
+        <h2 className="text-2xl font-black text-black">New Project</h2>
+
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Name</label>
+          <label className="block text-sm font-black text-black mb-2">Name</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full bg-neo-bg border-2 border-black rounded-xl px-4 py-3 text-sm text-black font-semibold focus:outline-none focus:bg-white transition-colors"
           />
         </div>
+
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Project type</label>
+          <label className="block text-sm font-black text-black mb-2">Project type</label>
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
-            className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm text-slate-100"
+            className="w-full bg-neo-bg border-2 border-black rounded-xl px-4 py-3 text-sm text-black font-semibold focus:outline-none"
           >
             <option value="car-parts">Car Parts</option>
             <option value="ml-model">ML Model</option>
           </select>
         </div>
+
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Ground Truth mode</label>
+          <label className="block text-sm font-black text-black mb-2">Ground Truth mode</label>
           <select
             value={gtMode}
             onChange={(e) => setGtMode(e.target.value)}
-            className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm text-slate-100"
+            className="w-full bg-neo-bg border-2 border-black rounded-xl px-4 py-3 text-sm text-black font-semibold focus:outline-none"
           >
             <option value="uploaded_gt">Uploaded GT</option>
             <option value="student_reference">Student Reference</option>
           </select>
         </div>
-        <div className="flex gap-3 pt-2">
+
+        <div className="flex gap-3 pt-1">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 border border-slate-600 text-slate-400 hover:text-white text-sm rounded px-4 py-2 transition-colors"
+            className="flex-1 border-2 border-black text-black font-black text-sm rounded-full px-4 py-2.5 hover:bg-neo-bg transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm rounded px-4 py-2 transition-colors"
+            className="flex-1 bg-black hover:bg-gray-800 disabled:opacity-60 text-white font-black text-sm rounded-full px-4 py-2.5 transition-transform hover:-translate-y-0.5 shadow-neo-sm"
           >
             {loading ? "Creating…" : "Create"}
           </button>

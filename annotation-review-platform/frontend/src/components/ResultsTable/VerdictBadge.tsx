@@ -2,12 +2,12 @@ import { Verdict } from "../../api/client";
 import clsx from "clsx";
 
 const CONFIG: Record<Verdict, { label: string; classes: string }> = {
-  exact_match:            { label: "Exact Match",          classes: "bg-green-900/50 text-green-300 border-green-700" },
-  minor_difference:       { label: "Minor",                classes: "bg-yellow-900/50 text-yellow-300 border-yellow-700" },
-  significant_difference: { label: "Significant",          classes: "bg-orange-900/50 text-orange-300 border-orange-700" },
-  missing:                { label: "Missing",              classes: "bg-red-900/50 text-red-300 border-red-700" },
-  extra:                  { label: "Extra",                classes: "bg-purple-900/50 text-purple-300 border-purple-700" },
-  needs_manual_review:    { label: "Needs Manual Review",  classes: "bg-slate-700/50 text-slate-300 border-slate-500" },
+  exact_match:            { label: "Exact Match",          classes: "bg-neo-mint text-black border-black" },
+  minor_difference:       { label: "Minor",                classes: "bg-neo-yellow text-black border-black" },
+  significant_difference: { label: "Significant",          classes: "bg-neo-peach text-black border-black" },
+  missing:                { label: "Missing",              classes: "bg-red-200 text-black border-black" },
+  extra:                  { label: "Extra",                classes: "bg-neo-lavender text-black border-black" },
+  needs_manual_review:    { label: "Needs Manual Review",  classes: "bg-gray-200 text-black border-black" },
 };
 
 export function VerdictBadge({ verdict }: { verdict: Verdict }) {

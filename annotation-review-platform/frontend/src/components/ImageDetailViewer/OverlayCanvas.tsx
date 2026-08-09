@@ -152,7 +152,7 @@ export default function OverlayCanvas({
         />
       ) : (
         <div
-          className="bg-slate-800 flex items-center justify-center text-slate-500 text-xs"
+          className="bg-neo-bg border-2 border-black flex items-center justify-center text-gray-500 text-xs font-bold"
           style={{ width, height }}
         >
           No image

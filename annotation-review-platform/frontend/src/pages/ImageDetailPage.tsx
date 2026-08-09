@@ -46,27 +46,32 @@ export default function ImageDetailPage() {
     <div className="p-6 max-w-7xl">
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-5 transition-colors"
+        className="flex items-center gap-2 text-black font-bold hover:text-gray-600 text-sm mb-5 transition-colors"
       >
         <ArrowLeft size={14} /> Back to results
       </button>
 
-      <h1 className="text-xl font-semibold text-slate-100 mb-5">Image Detail View</h1>
+      <h1 className="text-2xl font-black text-black mb-5">Image Detail View</h1>
 
-      {isLoading && <p className="text-slate-400 text-sm">Loading overlay…</p>}
+      {isLoading && (
+        <div className="flex items-center gap-3">
+          <div className="animate-spin rounded-full h-5 w-5 border-4 border-black border-t-transparent" />
+          <p className="text-black font-bold text-sm">Loading overlay…</p>
+        </div>
+      )}
 
       {overlay && (
         <div className="space-y-6">
           {/* Tags */}
           {(overlay.ref_tags.length > 0 || overlay.student_tags.length > 0) && (
-            <div className="flex gap-4 flex-wrap">
+            <div className="flex gap-3 flex-wrap">
               {overlay.ref_tags.map((t) => (
-                <span key={t} className="text-xs px-2 py-0.5 rounded border border-blue-600 text-blue-300">
+                <span key={t} className="text-xs font-black px-3 py-1 rounded-full border-2 border-black bg-neo-lavender text-black shadow-neo-sm">
                   REF: {t}
                 </span>
               ))}
               {overlay.student_tags.map((t) => (
-                <span key={t} className="text-xs px-2 py-0.5 rounded border border-orange-600 text-orange-300">
+                <span key={t} className="text-xs font-black px-3 py-1 rounded-full border-2 border-black bg-neo-peach text-black shadow-neo-sm">
                   STUDENT: {t}
                 </span>
               ))}
@@ -74,71 +79,75 @@ export default function ImageDetailPage() {
           )}
 
           {/* Side-by-side overlays */}
-          <div className="flex gap-4 flex-wrap">
+          <div className="flex gap-5 flex-wrap">
             <div>
-              <p className="text-xs text-slate-400 mb-2 flex items-center gap-1.5">
-                <span className="inline-block w-3 h-3 rounded-full bg-blue-500" />
+              <p className="text-xs font-black text-black mb-2 flex items-center gap-1.5 uppercase tracking-wider">
+                <span className="inline-block w-3 h-3 rounded-full bg-blue-500 border-2 border-black" />
                 Reference
               </p>
-              <OverlayCanvas
-                imageUrl={overlay.reference_image_url
-                  ? `/api/images/${overlay.reference_image_id}/bytes`
-                  : undefined}
-                shapes={overlay.reference_shapes}
-                source="reference"
-                shapeDiffs={overlay.shape_diffs}
-                width={PANEL_WIDTH}
-                height={PANEL_HEIGHT}
-                naturalWidth={800}
-                naturalHeight={600}
-              />
+              <div className="border-4 border-black rounded-xl overflow-hidden shadow-neo">
+                <OverlayCanvas
+                  imageUrl={overlay.reference_image_url
+                    ? `/api/images/${overlay.reference_image_id}/bytes`
+                    : undefined}
+                  shapes={overlay.reference_shapes}
+                  source="reference"
+                  shapeDiffs={overlay.shape_diffs}
+                  width={PANEL_WIDTH}
+                  height={PANEL_HEIGHT}
+                  naturalWidth={800}
+                  naturalHeight={600}
+                />
+              </div>
             </div>
             <div>
-              <p className="text-xs text-slate-400 mb-2 flex items-center gap-1.5">
-                <span className="inline-block w-3 h-3 rounded-full bg-orange-500" />
+              <p className="text-xs font-black text-black mb-2 flex items-center gap-1.5 uppercase tracking-wider">
+                <span className="inline-block w-3 h-3 rounded-full bg-orange-500 border-2 border-black" />
                 Student
               </p>
-              <OverlayCanvas
-                imageUrl={overlay.student_image_url
-                  ? `/api/images/${overlay.student_image_id}/bytes`
-                  : undefined}
-                shapes={overlay.student_shapes}
-                source="student"
-                shapeDiffs={overlay.shape_diffs}
-                width={PANEL_WIDTH}
-                height={PANEL_HEIGHT}
-                naturalWidth={800}
-                naturalHeight={600}
-              />
+              <div className="border-4 border-black rounded-xl overflow-hidden shadow-neo">
+                <OverlayCanvas
+                  imageUrl={overlay.student_image_url
+                    ? `/api/images/${overlay.student_image_id}/bytes`
+                    : undefined}
+                  shapes={overlay.student_shapes}
+                  source="student"
+                  shapeDiffs={overlay.shape_diffs}
+                  width={PANEL_WIDTH}
+                  height={PANEL_HEIGHT}
+                  naturalWidth={800}
+                  naturalHeight={600}
+                />
+              </div>
             </div>
           </div>
 
           {/* Shape diff list */}
           {overlay.shape_diffs.length > 0 && (
             <div>
-              <h2 className="text-sm font-medium text-slate-300 mb-2">Shape Differences</h2>
+              <h2 className="text-sm font-black text-black mb-3 uppercase tracking-wider">Shape Differences</h2>
               <div className="space-y-2">
                 {overlay.shape_diffs.map((d) => (
                   <div
                     key={d.id}
-                    className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-3"
+                    className="bg-white border-2 border-black rounded-xl px-4 py-3 shadow-neo-sm"
                   >
                     <div className="flex items-center gap-3 mb-1">
                       <VerdictBadge verdict={d.verdict} />
                       {d.iou_score != null && (
-                        <span className="text-xs text-slate-400">IoU: {d.iou_score.toFixed(3)}</span>
+                        <span className="text-xs font-bold text-gray-600">IoU: {d.iou_score.toFixed(3)}</span>
                       )}
                     </div>
                     {d.attribute_diffs && d.attribute_diffs.length > 0 && (
                       <div className="mt-2 space-y-1">
                         {d.attribute_diffs.map((a) => (
-                          <div key={a.name} className="flex items-center gap-2 text-xs">
-                            <span className="text-slate-400 font-mono">{a.name}:</span>
-                            <span className="text-blue-300">{a.ref_value ?? "—"}</span>
-                            <span className="text-slate-500">→</span>
-                            <span className="text-orange-300">{a.student_value ?? "—"}</span>
+                          <div key={a.name} className="flex items-center gap-2 text-xs font-semibold">
+                            <span className="text-gray-500 font-mono">{a.name}:</span>
+                            <span className="text-blue-700 font-bold">{a.ref_value ?? "—"}</span>
+                            <span className="text-gray-400">→</span>
+                            <span className="text-orange-700 font-bold">{a.student_value ?? "—"}</span>
                             {a.edit_distance != null && (
-                              <span className="text-slate-500">(edit dist: {a.edit_distance})</span>
+                              <span className="text-gray-400">(edit dist: {a.edit_distance})</span>
                             )}
                             <VerdictBadge verdict={a.verdict} />
                           </div>
@@ -151,18 +160,18 @@ export default function ImageDetailPage() {
             </div>
           )}
 
-          {/* Feedback panel — §19 */}
-          <div className="bg-slate-900 border border-slate-700 rounded-lg p-5 space-y-4">
-            <h2 className="text-sm font-medium text-slate-300 flex items-center gap-2">
+          {/* Feedback panel */}
+          <div className="bg-white border-4 border-black rounded-2xl shadow-neo p-5 space-y-4">
+            <h2 className="text-sm font-black text-black flex items-center gap-2 uppercase tracking-wider">
               <MessageSquare size={14} /> Reviewer Feedback
             </h2>
 
             {/* Status update */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <select
                 value={reworkStatus}
                 onChange={(e) => setReworkStatus(e.target.value as ReviewStatus)}
-                className="bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-xs text-slate-300"
+                className="bg-neo-bg border-2 border-black rounded-xl px-3 py-2 text-sm text-black font-semibold focus:outline-none"
               >
                 <option value="approved">Approve (false positive)</option>
                 <option value="needs_rework">Needs Rework</option>
@@ -172,7 +181,7 @@ export default function ImageDetailPage() {
               <button
                 onClick={() => statusMutation.mutate(reworkStatus)}
                 disabled={statusMutation.isPending}
-                className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded px-3 py-1.5 disabled:opacity-50"
+                className="flex items-center gap-1.5 bg-black hover:bg-gray-800 text-white text-sm font-black rounded-full px-4 py-2 disabled:opacity-50 transition-transform hover:-translate-y-0.5 shadow-neo-sm"
               >
                 <Flag size={12} /> Set Status
               </button>
@@ -185,12 +194,12 @@ export default function ImageDetailPage() {
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="Add a note for this image…"
                 rows={3}
-                className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full bg-neo-bg border-2 border-black rounded-xl px-4 py-3 text-sm text-black font-semibold focus:outline-none focus:bg-white resize-none transition-colors"
               />
               <button
                 onClick={() => feedbackMutation.mutate()}
                 disabled={!note.trim() || feedbackMutation.isPending}
-                className="mt-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded px-3 py-1.5 disabled:opacity-40 transition-colors"
+                className="mt-2 bg-neo-mint border-2 border-black text-black font-black text-sm rounded-full px-4 py-2 disabled:opacity-40 transition-transform hover:-translate-y-0.5 shadow-neo-sm"
               >
                 {feedbackMutation.isPending ? "Saving…" : "Save note"}
               </button>

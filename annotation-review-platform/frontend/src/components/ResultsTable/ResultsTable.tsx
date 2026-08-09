@@ -49,7 +49,7 @@ export default function ResultsTable({ runId }: Props) {
   const bulkMutation = useMutation({
     mutationFn: () =>
       feedbackApi.bulkStatus(
-        [...selected][0],          // result_id param (ignored server-side for bulk)
+        [...selected][0],
         [...selected],
         bulkStatus
       ),
@@ -77,11 +77,11 @@ export default function ResultsTable({ runId }: Props) {
   return (
     <div>
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-4">
+      <div className="flex flex-wrap gap-3 mb-5">
         <select
           value={verdictFilter}
           onChange={(e) => { setVerdictFilter(e.target.value as Verdict | ""); setOffset(0); }}
-          className="bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-xs text-slate-300"
+          className="bg-neo-bg border-2 border-black rounded-xl px-3 py-2 text-sm text-black font-bold focus:outline-none"
         >
           <option value="">All verdicts</option>
           {VERDICTS.map((v) => (
@@ -97,7 +97,7 @@ export default function ResultsTable({ runId }: Props) {
             setSortDir(dir);
             setOffset(0);
           }}
-          className="bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-xs text-slate-300"
+          className="bg-neo-bg border-2 border-black rounded-xl px-3 py-2 text-sm text-black font-bold focus:outline-none"
         >
           <option value="score:asc">Score ↑ (worst first)</option>
           <option value="score:desc">Score ↓ (best first)</option>
@@ -107,12 +107,12 @@ export default function ResultsTable({ runId }: Props) {
 
       {/* Bulk actions */}
       {selected.size > 0 && (
-        <div className="flex items-center gap-3 mb-3 bg-slate-800 border border-slate-600 rounded px-4 py-2">
-          <span className="text-xs text-slate-400">{selected.size} selected</span>
+        <div className="flex items-center gap-3 mb-4 bg-neo-yellow border-2 border-black rounded-xl px-4 py-2 shadow-neo-sm">
+          <span className="text-xs font-black text-black">{selected.size} selected</span>
           <select
             value={bulkStatus}
             onChange={(e) => setBulkStatus(e.target.value as ReviewStatus)}
-            className="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-xs text-slate-300"
+            className="bg-white border-2 border-black rounded-lg px-2 py-1 text-xs text-black font-bold focus:outline-none"
           >
             {REVIEW_STATUSES.map((s) => (
               <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
@@ -121,7 +121,7 @@ export default function ResultsTable({ runId }: Props) {
           <button
             onClick={() => bulkMutation.mutate()}
             disabled={bulkMutation.isPending}
-            className="flex items-center gap-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded px-3 py-1"
+            className="flex items-center gap-1 bg-black hover:bg-gray-800 text-white text-xs font-black rounded-full px-3 py-1.5 transition-transform hover:-translate-y-0.5"
           >
             <CheckSquare size={12} /> Apply
           </button>
@@ -129,18 +129,24 @@ export default function ResultsTable({ runId }: Props) {
       )}
 
       {/* Table */}
-      {isLoading && <p className="text-slate-400 text-sm">Loading…</p>}
+      {isLoading && (
+        <div className="flex items-center gap-3 py-8">
+          <div className="animate-spin rounded-full h-5 w-5 border-4 border-black border-t-transparent" />
+          <p className="text-black font-bold text-sm">Loading…</p>
+        </div>
+      )}
+
       {data && (
-        <div className="overflow-x-auto rounded-lg border border-slate-700">
+        <div className="overflow-x-auto rounded-2xl border-4 border-black shadow-neo">
           <table className="w-full text-sm text-left">
-            <thead className="bg-slate-800 text-xs text-slate-400 uppercase">
+            <thead className="bg-neo-peach border-b-4 border-black text-xs text-black uppercase font-black">
               <tr>
                 <th className="px-3 py-3 w-8">
                   <input
                     type="checkbox"
                     checked={selected.size === data.items.length && data.items.length > 0}
                     onChange={toggleSelectAll}
-                    className="rounded"
+                    className="rounded border-2 border-black"
                   />
                 </th>
                 <th className="px-4 py-3">Image</th>
@@ -151,36 +157,36 @@ export default function ResultsTable({ runId }: Props) {
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y-2 divide-black bg-white">
               {data.items.map((r: ComparisonResult) => (
-                <tr key={r.id} className="hover:bg-slate-900/50 transition-colors">
+                <tr key={r.id} className="hover:bg-neo-bg transition-colors">
                   <td className="px-3 py-3">
                     <input
                       type="checkbox"
                       checked={selected.has(r.id)}
                       onChange={() => toggleSelect(r.id)}
-                      className="rounded"
+                      className="rounded border-2 border-black"
                     />
                   </td>
-                  <td className="px-4 py-3 text-slate-300 font-mono text-xs max-w-[180px] truncate">
+                  <td className="px-4 py-3 text-black font-black font-mono text-xs max-w-[180px] truncate">
                     {r.student_image_id.slice(0, 8)}…
                   </td>
-                  <td className="px-4 py-3 text-slate-400 text-xs">
+                  <td className="px-4 py-3 text-gray-600 font-bold text-xs">
                     {r.student_id.slice(0, 8)}…
                   </td>
                   <td className="px-4 py-3">
                     <VerdictBadge verdict={r.verdict} />
                   </td>
-                  <td className="px-4 py-3 text-slate-300 text-xs">
+                  <td className="px-4 py-3 text-black font-black text-xs">
                     {r.score != null ? r.score.toFixed(1) : "—"}
                   </td>
-                  <td className="px-4 py-3 text-xs text-slate-400">
+                  <td className="px-4 py-3 text-xs font-bold text-gray-700">
                     {r.review_status.replace(/_/g, " ")}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Link
                       to={`/runs/${runId}/results/${r.id}`}
-                      className="text-xs text-blue-400 hover:text-blue-300"
+                      className="text-xs font-black text-black underline decoration-2 underline-offset-2 hover:text-gray-600"
                     >
                       View →
                     </Link>
@@ -194,7 +200,7 @@ export default function ResultsTable({ runId }: Props) {
 
       {/* Pagination */}
       {data && (
-        <div className="flex items-center justify-between mt-4 text-xs text-slate-400">
+        <div className="flex items-center justify-between mt-5 text-xs text-black font-bold">
           <span>
             {offset + 1}–{Math.min(offset + LIMIT, data.total)} of {data.total}
           </span>
@@ -202,14 +208,14 @@ export default function ResultsTable({ runId }: Props) {
             <button
               disabled={offset === 0}
               onClick={() => setOffset(Math.max(0, offset - LIMIT))}
-              className="flex items-center gap-1 px-2 py-1 border border-slate-700 rounded disabled:opacity-30 hover:text-white"
+              className="flex items-center gap-1 px-3 py-1.5 border-2 border-black rounded-full font-black disabled:opacity-30 hover:bg-black hover:text-white transition-colors"
             >
               <ChevronLeft size={12} /> Prev
             </button>
             <button
               disabled={!data.has_more}
               onClick={() => setOffset(offset + LIMIT)}
-              className="flex items-center gap-1 px-2 py-1 border border-slate-700 rounded disabled:opacity-30 hover:text-white"
+              className="flex items-center gap-1 px-3 py-1.5 border-2 border-black rounded-full font-black disabled:opacity-30 hover:bg-black hover:text-white transition-colors"
             >
               Next <ChevronRight size={12} />
             </button>

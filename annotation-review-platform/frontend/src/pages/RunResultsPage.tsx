@@ -3,6 +3,15 @@ import { useQuery } from "@tanstack/react-query";
 import { runsApi } from "../api/client";
 import ResultsTable from "../components/ResultsTable/ResultsTable";
 
+const VERDICT_PASTELS: Record<string, string> = {
+  exact_match: "bg-neo-mint",
+  minor_difference: "bg-neo-yellow",
+  significant_difference: "bg-neo-peach",
+  missing: "bg-red-200",
+  extra: "bg-neo-lavender",
+  needs_manual_review: "bg-gray-200",
+};
+
 export default function RunResultsPage() {
   const { runId } = useParams<{ runId: string }>();
 
@@ -25,23 +34,23 @@ export default function RunResultsPage() {
   return (
     <div className="p-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-slate-100">Comparison Run Results</h1>
-        <p className="text-xs text-slate-500 mt-1 font-mono">{runId}</p>
+        <h1 className="text-3xl font-black text-black">Comparison Run Results</h1>
+        <p className="text-xs text-gray-500 mt-1 font-mono font-semibold">{runId}</p>
         {run && (
-          <div className="flex items-center gap-4 mt-2">
+          <div className="flex items-center gap-3 mt-3">
             <span
-              className={`text-xs px-2 py-0.5 rounded border ${
+              className={`text-xs font-black px-3 py-1 rounded-full border-2 border-black shadow-neo-sm ${
                 run.status === "complete"
-                  ? "bg-green-900/40 text-green-300 border-green-700"
+                  ? "bg-neo-mint text-black"
                   : run.status === "failed"
-                  ? "bg-red-900/40 text-red-300 border-red-700"
-                  : "bg-blue-900/40 text-blue-300 border-blue-700"
+                  ? "bg-red-200 text-black"
+                  : "bg-neo-lavender text-black"
               }`}
             >
               {run.status}
             </span>
             {run.status === "processing" && (
-              <span className="text-xs text-slate-400">
+              <span className="text-xs font-semibold text-gray-600">
                 {run.processed_count} / {run.total_count} students ({Math.round(run.progress_pct)}%)
               </span>
             )}
@@ -51,14 +60,14 @@ export default function RunResultsPage() {
 
       {/* Summary cards */}
       {summary && (
-        <div className="flex flex-wrap gap-3 mb-6">
+        <div className="flex flex-wrap gap-4 mb-8">
           {Object.entries(summary.by_verdict).map(([verdict, count]) => (
             <div
               key={verdict}
-              className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 min-w-[130px]"
+              className={`${VERDICT_PASTELS[verdict] ?? "bg-white"} border-4 border-black rounded-2xl px-5 py-4 min-w-[140px] shadow-neo hover:-translate-y-1 transition-transform`}
             >
-              <p className="text-xs text-slate-400">{verdict.replace(/_/g, " ")}</p>
-              <p className="text-2xl font-semibold text-slate-100 mt-0.5">{count as number}</p>
+              <p className="text-xs font-black text-black uppercase tracking-wide">{verdict.replace(/_/g, " ")}</p>
+              <p className="text-3xl font-black text-black mt-1">{count as number}</p>
             </div>
           ))}
         </div>

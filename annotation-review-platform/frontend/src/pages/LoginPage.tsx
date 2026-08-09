@@ -30,39 +30,43 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950">
+    <div className="min-h-screen flex items-center justify-center bg-neo-lavender p-4">
       <form
         onSubmit={submit}
-        className="bg-slate-900 border border-slate-700 rounded-lg p-8 w-full max-w-sm space-y-5"
+        className="bg-white border-4 border-black shadow-neo rounded-2xl p-8 w-full max-w-sm space-y-6"
       >
-        <h1 className="text-xl font-semibold text-slate-100">Annotation Review Platform</h1>
-        <p className="text-sm text-slate-400">Sign in to continue</p>
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-black mb-2 tracking-tight">Welcome Back!</h1>
+          <p className="text-sm font-semibold text-gray-700">Sign in to the Annotation Review Platform</p>
+        </div>
 
         {error && (
-          <div className="bg-red-900/40 border border-red-700 text-red-300 text-sm rounded px-3 py-2">
+          <div className="bg-neo-pink border-2 border-black text-black text-sm font-bold rounded-lg px-4 py-3 shadow-neo-sm">
             {error}
           </div>
         )}
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Email</label>
+            <label className="block text-sm font-bold text-black mb-2">Email address</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-neo-bg border-2 border-black rounded-xl px-4 py-3 text-sm text-black font-semibold focus:outline-none focus:ring-0 focus:bg-white transition-colors"
+              placeholder="you@example.com"
             />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Password</label>
+            <label className="block text-sm font-bold text-black mb-2">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-neo-bg border-2 border-black rounded-xl px-4 py-3 text-sm text-black font-semibold focus:outline-none focus:ring-0 focus:bg-white transition-colors"
+              placeholder="••••••••"
             />
           </div>
         </div>
@@ -70,16 +74,16 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium rounded px-4 py-2 transition-colors"
+          className="w-full bg-black hover:bg-gray-800 disabled:opacity-70 text-white text-base font-bold rounded-full px-6 py-3 transition-transform hover:-translate-y-1 shadow-neo-hover"
         >
-          {loading ? "Signing in…" : "Sign in"}
+          {loading ? "Signing in…" : "Sign in to your account"}
         </button>
 
-        <p className="text-center text-xs text-slate-500">
+        <p className="text-center text-sm font-bold text-gray-700 mt-6">
           Don't have an account?{" "}
           <Link
             to="/register"
-            className="font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+            className="text-black underline decoration-2 underline-offset-2 hover:text-gray-700"
           >
             Create one
           </Link>
