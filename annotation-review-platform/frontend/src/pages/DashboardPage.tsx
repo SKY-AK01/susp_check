@@ -8,6 +8,7 @@ import { reportsApi, studentsApi, LeaderboardEntry } from "../api/client";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
 } from "recharts";
+import { BarChart as BarChartIcon } from "lucide-react";
 
 const VERDICT_COLORS: Record<string, string> = {
   exact_match:            "#22c55e",
@@ -21,29 +22,31 @@ const VERDICT_COLORS: Record<string, string> = {
 export default function DashboardPage() {
   const { projectId } = useParams<{ projectId: string }>();
 
-  const { data: trend } = useQuery({
+  const { data: trend, isLoading: isLoadingTrend } = useQuery({
     queryKey: ["student-trend", projectId],
     queryFn: () => reportsApi.studentTrend(projectId!).then((r) => r.data),
     enabled: !!projectId,
   });
 
-  const { data: labelErrors } = useQuery({
+  const { data: labelErrors, isLoading: isLoadingLabels } = useQuery({
     queryKey: ["label-errors", projectId],
     queryFn: () => reportsApi.labelErrorRates(projectId!).then((r) => r.data),
     enabled: !!projectId,
   });
 
-  const { data: reviewerActivity } = useQuery({
+  const { data: reviewerActivity, isLoading: isLoadingActivity } = useQuery({
     queryKey: ["reviewer-activity", projectId],
     queryFn: () => reportsApi.reviewerActivity(projectId!).then((r) => r.data),
     enabled: !!projectId,
   });
 
-  const { data: leaderboard } = useQuery({
+  const { data: leaderboard, isLoading: isLoadingLeaderboard } = useQuery({
     queryKey: ["leaderboard", projectId],
     queryFn: () => studentsApi.leaderboard(projectId!).then((r) => r.data),
     enabled: !!projectId,
   });
+
+  const isLoading = isLoadingTrend || isLoadingLabels || isLoadingActivity || isLoadingLeaderboard;
 
   // Build per-verdict aggregate from trend data for summary cards
   const verdictTotals: Record<string, number> = {};
@@ -55,11 +58,41 @@ export default function DashboardPage() {
     }
   }
 
+  const isEmpty = !isLoading && Object.keys(verdictTotals).length === 0;
+
   return (
     <div className="p-8 max-w-6xl space-y-8">
       <h1 className="text-2xl font-semibold text-slate-100">Dashboard</h1>
 
-      {/* Summary cards */}
+      {isLoading && (
+        <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-400 mb-4"></div>
+          <p>Loading dashboard data...</p>
+        </div>
+      )}
+
+      {isEmpty && (
+        <div className="bg-slate-900 border border-slate-700 rounded-lg p-12 text-center max-w-2xl mx-auto mt-12">
+          <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+            <BarChartIcon className="w-8 h-8 text-slate-500" />
+          </div>
+          <h2 className="text-xl font-medium text-slate-200 mb-2">No comparison runs yet</h2>
+          <p className="text-slate-400 text-sm mb-8 max-w-md mx-auto">
+            The dashboard is empty because there are no completed comparison runs for this project. 
+            Upload a CVAT ZIP and trigger a comparison run to view metrics and student performance.
+          </p>
+          <Link
+            to={`/projects/${projectId}`}
+            className="inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-slate-900 font-semibold text-sm rounded px-6 py-2.5 transition-colors shadow-[2px_2px_0px_#1a1a1a]"
+          >
+            Go to Project Details
+          </Link>
+        </div>
+      )}
+
+      {!isLoading && !isEmpty && (
+        <>
+          {/* Summary cards */}
       {Object.keys(verdictTotals).length > 0 && (
         <section>
           <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-3">
@@ -212,6 +245,8 @@ export default function DashboardPage() {
             </table>
           </div>
         </section>
+      )}
+        </>
       )}
     </div>
   );
