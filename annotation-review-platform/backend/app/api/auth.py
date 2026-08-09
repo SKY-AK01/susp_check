@@ -34,6 +34,7 @@ async def register_public(
     )
     db.add(user)
     await db.flush()
+    await db.refresh(user)
     return user
 
 

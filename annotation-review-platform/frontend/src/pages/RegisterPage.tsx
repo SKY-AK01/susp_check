@@ -41,12 +41,16 @@ export default function RegisterPage() {
       setStep("success");
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
+      const status = err?.response?.status;
+      console.error("Registration error", status, detail, err);
       if (detail === "Invalid invite code") {
         setError("Invalid invite code. Please check and try again.");
       } else if (detail === "Email already registered") {
         setError("This email is already registered. Try signing in.");
+      } else if (typeof detail === "string") {
+        setError(detail);
       } else {
-        setError("Something went wrong. Please try again.");
+        setError(`Something went wrong (${status ?? "network error"}). Please try again.`);
       }
     } finally {
       setLoading(false);
