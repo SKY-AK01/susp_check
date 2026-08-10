@@ -4,7 +4,7 @@ import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
@@ -14,11 +14,78 @@ from app.models.comparison import (
     ComparisonResult, ComparisonRun, ReferenceSet, RunStatus, ShapeDiff, Verdict,
 )
 from app.models.feedback import AuditLog
+from app.models.image import Image
+from app.models.student import Student
 from app.models.user import User
 from app.schemas.common import Page, PaginationParams
 from app.schemas.comparison import ComparisonResultOut, ComparisonRunOut, RunCreate
 
 router = APIRouter(prefix="/api", tags=["runs"])
+
+
+# ── New: list all runs for a project ──────────────────────────────────────────
+
+class ComparisonRunWithStatsOut(BaseModel):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    reference_set_id: uuid.UUID
+    upload_id: uuid.UUID
+    status: str
+    progress_pct: float
+    processed_count: int
+    total_count: int
+    started_at: Optional[str]
+    completed_at: Optional[str]
+    # computed
+    student_count: int = 0
+    avg_score: Optional[float] = None
+
+
+@router.get("/projects/{project_id}/runs", response_model=Page[ComparisonRunWithStatsOut])
+async def list_project_runs(
+    project_id: uuid.UUID,
+    pagination: PaginationParams = Depends(),
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_any),
+):
+    """List all comparison runs for a project, newest first."""
+    total = (await db.execute(
+        select(func.count(ComparisonRun.id)).where(ComparisonRun.project_id == project_id)
+    )).scalar_one()
+
+    rows = (await db.execute(
+        select(ComparisonRun)
+        .where(ComparisonRun.project_id == project_id)
+        .order_by(desc(ComparisonRun.started_at.nullslast()), desc(ComparisonRun.id))
+        .offset(pagination.offset).limit(pagination.limit)
+    )).scalars().all()
+
+    out = []
+    for run in rows:
+        # Per-run student count + avg score
+        stats = (await db.execute(
+            select(
+                func.count(ComparisonResult.student_id.distinct()).label("student_count"),
+                func.avg(ComparisonResult.score).label("avg_score"),
+            ).where(ComparisonResult.run_id == run.id)
+        )).one()
+
+        out.append(ComparisonRunWithStatsOut(
+            id=run.id,
+            project_id=run.project_id,
+            reference_set_id=run.reference_set_id,
+            upload_id=run.upload_id,
+            status=run.status.value,
+            progress_pct=run.progress_pct,
+            processed_count=run.processed_count,
+            total_count=run.total_count,
+            started_at=run.started_at.isoformat() if run.started_at else None,
+            completed_at=run.completed_at.isoformat() if run.completed_at else None,
+            student_count=stats.student_count or 0,
+            avg_score=round(float(stats.avg_score), 1) if stats.avg_score is not None else None,
+        ))
+
+    return Page.build(items=out, total=total, limit=pagination.limit, offset=pagination.offset)
 
 
 @router.post("/reference-sets/{ref_set_id}/runs", response_model=ComparisonRunOut, status_code=202)
@@ -132,14 +199,38 @@ async def list_results(
         for d in diffs:
             diffs_by_result[d.comparison_result_id].append(d)
 
+    # Eagerly load student names and image filenames to enrich the output
+    student_ids = list({r.student_id for r in rows})
+    image_ids = list({r.student_image_id for r in rows})
+
+    students_map: dict[uuid.UUID, Student] = {}
+    if student_ids:
+        students = (await db.execute(
+            select(Student).where(Student.id.in_(student_ids))
+        )).scalars().all()
+        students_map = {s.id: s for s in students}
+
+    images_map: dict[uuid.UUID, Image] = {}
+    if image_ids:
+        images = (await db.execute(
+            select(Image).where(Image.id.in_(image_ids))
+        )).scalars().all()
+        images_map = {img.id: img for img in images}
+
+    from app.schemas.comparison import ShapeDiffOut
+
     out_rows = []
     for r in rows:
-        r_dict = ComparisonResultOut.model_validate(r)
-        r_dict.shape_diffs = [
-            __import__("app.schemas.comparison", fromlist=["ShapeDiffOut"]).ShapeDiffOut.model_validate(d)
-            for d in diffs_by_result[r.id]
-        ]
-        out_rows.append(r_dict)
+        r_out = ComparisonResultOut.model_validate(r)
+        r_out.shape_diffs = [ShapeDiffOut.model_validate(d) for d in diffs_by_result[r.id]]
+        # Attach display names for the frontend
+        stu = students_map.get(r.student_id)
+        img = images_map.get(r.student_image_id)
+        r_out.student_display_name = (
+            stu.display_name or stu.username or str(r.student_id)[:8]
+        ) if stu else str(r.student_id)[:8]
+        r_out.image_filename = img.raw_filename if img else None
+        out_rows.append(r_out)
 
     return Page.build(items=out_rows, total=total, limit=pagination.limit, offset=pagination.offset)
 

@@ -64,6 +64,9 @@ class ComparisonResultOut(BaseModel):
     review_status: ReviewStatus
     created_at: datetime
     shape_diffs: List[ShapeDiffOut] = []
+    # enriched fields (set server-side when listing results)
+    student_display_name: Optional[str] = None
+    image_filename: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -113,3 +116,8 @@ class OverlayPayload(BaseModel):
     shape_diffs: List[ShapeDiffOut]
     ref_tags: List[str]
     student_tags: List[str]
+    # image natural dimensions for correct overlay scaling
+    student_image_width: Optional[int] = None
+    student_image_height: Optional[int] = None
+    reference_image_width: Optional[int] = None
+    reference_image_height: Optional[int] = None

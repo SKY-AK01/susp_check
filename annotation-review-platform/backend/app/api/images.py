@@ -143,6 +143,10 @@ async def get_overlay(
         shape_diffs=[ShapeDiffOut.model_validate(d) for d in diffs],
         ref_tags=list(ref_tags),
         student_tags=list(stu_tags),
+        student_image_width=stu_img.width,
+        student_image_height=stu_img.height,
+        reference_image_width=ref_img.width if result.reference_image_id and ref_img else None,
+        reference_image_height=ref_img.height if result.reference_image_id and ref_img else None,
     )
 
 

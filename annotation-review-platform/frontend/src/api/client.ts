@@ -116,6 +116,8 @@ export interface ComparisonResult {
   review_status: ReviewStatus;
   created_at: string;
   shape_diffs: ShapeDiff[];
+  student_display_name?: string;
+  image_filename?: string;
 }
 
 export interface ShapeData {
@@ -137,6 +139,10 @@ export interface OverlayPayload {
   shape_diffs: ShapeDiff[];
   ref_tags: string[];
   student_tags: string[];
+  student_image_width?: number;
+  student_image_height?: number;
+  reference_image_width?: number;
+  reference_image_height?: number;
 }
 
 // ── API functions ─────────────────────────────────────────────────────────────
@@ -170,6 +176,8 @@ export const uploadsApi = {
 export const runsApi = {
   trigger: (refSetId: string, uploadId?: string) =>
     api.post<ComparisonRun>(`/reference-sets/${refSetId}/runs`, uploadId ? { upload_id: uploadId } : {}),
+  listForProject: (projectId: string, limit = 20, offset = 0) =>
+    api.get<Page<ComparisonRunWithStats>>(`/projects/${projectId}/runs`, { params: { limit, offset } }),
   get: (runId: string) => api.get<ComparisonRun>(`/runs/${runId}`),
   results: (
     runId: string,
@@ -188,6 +196,21 @@ export const runsApi = {
     api.get<ComparisonResult>(`/runs/${runId}/results/${resultId}`),
   summary: (runId: string) => api.get(`/runs/${runId}/summary`),
 };
+
+export interface ComparisonRunWithStats {
+  id: string;
+  project_id: string;
+  reference_set_id: string;
+  upload_id: string;
+  status: string;
+  progress_pct: number;
+  processed_count: number;
+  total_count: number;
+  started_at?: string;
+  completed_at?: string;
+  student_count: number;
+  avg_score?: number;
+}
 
 // ── Reference Sets ────────────────────────────────────────────────────────────
 

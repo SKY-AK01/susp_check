@@ -1,14 +1,14 @@
 /**
  * Project dashboard — §18.1–18.5.
- * Summary cards, student trend chart, label error rates, reviewer activity.
+ * Runs history, summary cards, student leaderboard, label error rates, reviewer activity.
  */
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { reportsApi, studentsApi, LeaderboardEntry } from "../api/client";
+import { reportsApi, studentsApi, runsApi, LeaderboardEntry, ComparisonRunWithStats } from "../api/client";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
 } from "recharts";
-import { BarChart as BarChartIcon } from "lucide-react";
+import { BarChart as BarChartIcon, Play, CheckCheck, Clock, AlertTriangle, RefreshCw } from "lucide-react";
 
 const VERDICT_COLORS: Record<string, string> = {
   exact_match:            "#22c55e",
@@ -49,6 +49,13 @@ export default function DashboardPage() {
     enabled: !!projectId,
   });
 
+  const { data: runsHistory } = useQuery({
+    queryKey: ["project-runs", projectId],
+    queryFn: () => runsApi.listForProject(projectId!).then((r) => r.data),
+    enabled: !!projectId,
+    refetchInterval: 8000, // poll while runs may be in progress
+  });
+
   const isLoading = isLoadingTrend || isLoadingLabels || isLoadingActivity || isLoadingLeaderboard;
 
   // Build per-verdict aggregate from trend data for summary cards
@@ -66,6 +73,94 @@ export default function DashboardPage() {
   return (
     <div className="p-8 max-w-6xl space-y-8">
       <h1 className="text-3xl font-black text-black tracking-tight">Dashboard</h1>
+
+      {/* ── Runs History ─────────────────────────────────────────────────── */}
+      {runsHistory && runsHistory.items.length > 0 && (
+        <section>
+          <h2 className="text-xs font-black text-black uppercase tracking-widest mb-4">Comparison Runs</h2>
+          <div className="bg-white border-2 border-black rounded-2xl shadow-neo overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-neo-blue border-b-2 border-black text-xs text-white uppercase font-black">
+                <tr>
+                  <th className="px-4 py-3 text-left">#</th>
+                  <th className="px-4 py-3 text-left">Date</th>
+                  <th className="px-4 py-3 text-right">Students</th>
+                  <th className="px-4 py-3 text-right">Avg Score</th>
+                  <th className="px-4 py-3 text-right">Status</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {runsHistory.items.map((run: ComparisonRunWithStats, i: number) => {
+                  const statusCfg = {
+                    complete:         { color: "bg-neo-teal text-white",   icon: <CheckCheck size={11} /> },
+                    processing:       { color: "bg-neo-blue text-white",   icon: <RefreshCw size={11} className="animate-spin" /> },
+                    pending:          { color: "bg-neo-yellow text-black", icon: <Clock size={11} /> },
+                    failed:           { color: "bg-neo-red text-white",    icon: <AlertTriangle size={11} /> },
+                    partially_failed: { color: "bg-neo-orange text-white", icon: <AlertTriangle size={11} /> },
+                  }[run.status] ?? { color: "bg-gray-200 text-black", icon: null };
+
+                  return (
+                    <tr key={run.id} className="hover:bg-neo-bg transition-colors">
+                      <td className="px-4 py-3 text-gray-400 font-black font-mono text-xs">
+                        {runsHistory.total - i}
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="text-black font-black text-xs">
+                          {run.started_at
+                            ? new Date(run.started_at).toLocaleDateString()
+                            : "Pending"}
+                        </p>
+                        {run.completed_at && (
+                          <p className="text-gray-400 font-mono text-xs">
+                            {new Date(run.completed_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        )}
+                        {run.status === "processing" && (
+                          <p className="text-neo-blue text-xs font-bold">
+                            {Math.round(run.progress_pct)}% complete
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right text-black font-black font-mono text-xs">
+                        {run.student_count}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {run.avg_score != null ? (
+                          <span
+                            className="font-black font-mono text-sm"
+                            style={{
+                              color: run.avg_score >= 80 ? "#16a34a"
+                                : run.avg_score >= 60 ? "#d97706" : "#dc2626"
+                            }}
+                          >
+                            {run.avg_score.toFixed(1)}
+                          </span>
+                        ) : <span className="text-gray-400 text-xs">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={`inline-flex items-center gap-1 text-xs font-black px-2.5 py-1 rounded-full border-2 border-black ${statusCfg.color}`}>
+                          {statusCfg.icon} {run.status.replace(/_/g, " ")}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {run.status === "complete" || run.status === "partially_failed" ? (
+                          <Link
+                            to={`/runs/${run.id}/results`}
+                            className="text-xs font-black text-neo-blue underline decoration-2 underline-offset-2 hover:text-blue-800"
+                          >
+                            View results →
+                          </Link>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {isLoading && (
         <div className="flex flex-col items-center justify-center py-20 text-gray-500">
