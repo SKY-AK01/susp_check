@@ -670,9 +670,9 @@ function RunsPanel({ projectId }: { projectId: string }) {
           }
         </button>
 
-        {students?.items?.length > 0 && (
+        {(students?.items?.length ?? 0) > 0 && (
           <p className="text-xs font-semibold text-gray-400">
-            {students.items.length} student{students.items.length !== 1 ? "s" : ""} found in this project.
+            {students!.items.length} student{students!.items.length !== 1 ? "s" : ""} found in this project.
             {" "}The selected GT student will be excluded from the results — only the others will be compared.
           </p>
         )}
