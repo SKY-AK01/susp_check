@@ -374,60 +374,100 @@ function StudentsPanel({ projectId }: { projectId: string }) {
 
 function RunsPanel({ projectId }: { projectId: string }) {
   const qc = useQueryClient();
-  const [selectedRefSetId, setSelectedRefSetId] = useState("");
+
+  // ── state ──────────────────────────────────────────────────────────────────
+  const [gtMode, setGtMode] = useState<"uploaded_gt" | "student_reference">("student_reference");
+  const [selectedStudentId, setSelectedStudentId] = useState("");   // for student_reference mode
   const [selectedUploadId, setSelectedUploadId] = useState("");
   const [triggeredRunId, setTriggeredRunId] = useState<string | null>(null);
   const [triggerError, setTriggerError] = useState<string | null>(null);
+  const [creatingRefSet, setCreatingRefSet] = useState(false);
 
-  // Load reference sets for this project
-  const { data: refSets, isLoading: loadingRefSets } = useQuery({
-    queryKey: ["reference-sets", projectId],
-    queryFn: () => referenceSetsApi.list(projectId).then((r) => r.data),
+  // ── data queries ───────────────────────────────────────────────────────────
+  const { data: project } = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: () => projectsApi.get(projectId!).then((r) => r.data),
   });
 
-  // Load student-submission uploads (non-reference)
+  const { data: students, isLoading: loadingStudents } = useQuery({
+    queryKey: ["students", projectId],
+    queryFn: () => studentsApi.list(projectId, undefined, 200, 0).then((r) => r.data),
+  });
+
   const { data: uploads, isLoading: loadingUploads } = useQuery({
     queryKey: ["uploads", projectId],
     queryFn: () => uploadsApi.list(projectId).then((r) => r.data),
   });
 
-  // Filter to ingested non-reference uploads only
-  const submissionUploads = uploads?.items.filter(
-    (u: Upload) => !u.is_reference && u.status === "ingested"
-  ) ?? [];
-
-  const triggerMutation = useMutation({
-    mutationFn: () => runsApi.trigger(selectedRefSetId, selectedUploadId),
-    onSuccess: (res) => {
-      setTriggeredRunId(res.data.id);
-      setTriggerError(null);
-      qc.invalidateQueries({ queryKey: ["runs", projectId] });
-    },
-    onError: (err: any) => {
-      setTriggerError(err?.response?.data?.detail ?? "Failed to trigger run.");
-    },
+  const { data: refSets, isLoading: loadingRefSets, refetch: refetchRefSets } = useQuery({
+    queryKey: ["reference-sets", projectId],
+    queryFn: () => referenceSetsApi.list(projectId).then((r) => r.data),
   });
 
-  const canTrigger = selectedRefSetId && selectedUploadId && !triggerMutation.isPending;
+  // ── derived data ───────────────────────────────────────────────────────────
+  const submissionUploads = (uploads?.items ?? []).filter(
+    (u: Upload) => !u.is_reference && u.status === "ingested"
+  );
 
-  const statusIcon = (status: string) => {
-    if (status === "complete") return <CheckCheck size={14} className="text-neo-teal" />;
-    if (status === "failed" || status === "partially_failed") return <AlertTriangle size={14} className="text-neo-red" />;
-    if (status === "processing") return <RefreshCw size={14} className="text-neo-blue animate-spin" />;
-    return <Clock size={14} className="text-neo-yellow" />;
-  };
+  // ── Step 1: create ref set from selected student, then trigger run ─────────
+  async function handleTrigger() {
+    setTriggerError(null);
+    setTriggeredRunId(null);
 
-  const statusColor = (status: string) => {
-    if (status === "complete") return "bg-neo-teal text-white border-black";
-    if (status === "failed" || status === "partially_failed") return "bg-neo-red text-white border-black";
-    if (status === "processing") return "bg-neo-blue text-white border-black";
-    return "bg-neo-yellow text-black border-black";
-  };
+    if (!selectedUploadId) {
+      setTriggerError("Please select a student submissions upload.");
+      return;
+    }
+
+    try {
+      let refSetId = "";
+
+      if (gtMode === "student_reference") {
+        if (!selectedStudentId) {
+          setTriggerError("Please select which student's data to use as Ground Truth.");
+          return;
+        }
+        setCreatingRefSet(true);
+        // Create a reference set using selected student as GT
+        const refSetRes = await referenceSetsApi.create(projectId, {
+          source_type: "student",
+          reference_student_id: selectedStudentId,
+        });
+        refSetId = refSetRes.data.id;
+        await refetchRefSets();
+      } else {
+        // uploaded_gt — use most recent ref set of uploaded_gt type
+        const uploadedGtSet = refSets?.items?.find(
+          (rs: ReferenceSet) => rs.source_type === "uploaded_gt"
+        );
+        if (!uploadedGtSet) {
+          setTriggerError("No uploaded GT reference set found. Upload a reference ZIP first or switch to Student Reference mode.");
+          return;
+        }
+        refSetId = uploadedGtSet.id;
+      }
+
+      setCreatingRefSet(false);
+
+      const runRes = await runsApi.trigger(refSetId, selectedUploadId);
+      setTriggeredRunId(runRes.data.id);
+      qc.invalidateQueries({ queryKey: ["runs", projectId] });
+    } catch (err: any) {
+      setCreatingRefSet(false);
+      setTriggerError(err?.response?.data?.detail ?? "Failed to trigger run. Please try again.");
+    }
+  }
+
+  const isBusy = creatingRefSet;
+  const canTrigger =
+    selectedUploadId &&
+    (gtMode === "uploaded_gt" || (gtMode === "student_reference" && selectedStudentId)) &&
+    !isBusy;
 
   return (
     <div className="space-y-6">
-      {/* Trigger new run card */}
-      <div className="bg-white border-2 border-black rounded-2xl shadow-neo p-6 space-y-5">
+      {/* ── Trigger card ─────────────────────────────────────────────────── */}
+      <div className="bg-white border-2 border-black rounded-2xl shadow-neo p-6 space-y-6">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-neo-yellow border-2 border-black flex items-center justify-center shadow-neo-sm">
             <Play size={16} className="text-black" />
@@ -436,89 +476,147 @@ function RunsPanel({ projectId }: { projectId: string }) {
         </div>
 
         {triggerError && <Alert type="error">{triggerError}</Alert>}
-
         {triggeredRunId && (
           <Alert type="success">
-            Run triggered!{" "}
+            ✅ Run triggered!{" "}
             <Link to={`/runs/${triggeredRunId}/results`} className="underline font-black">
               View results →
             </Link>
           </Alert>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Reference Set selector */}
-          <div>
-            <label className="block text-xs font-black text-black uppercase tracking-wider mb-2">
-              Reference Set (Ground Truth)
-            </label>
-            {loadingRefSets ? (
-              <p className="text-xs text-gray-500 font-semibold">Loading…</p>
-            ) : !refSets?.items.length ? (
-              <div className="border-2 border-black rounded-xl p-3 bg-neo-bg">
-                <p className="text-xs font-bold text-gray-600">No reference sets yet.</p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  Create one via the API: <code className="font-mono bg-gray-100 px-1 rounded">POST /api/projects/{"{id}"}/reference-sets</code>
-                </p>
-              </div>
-            ) : (
-              <select
-                value={selectedRefSetId}
-                onChange={(e) => setSelectedRefSetId(e.target.value)}
-                className="w-full bg-neo-bg border-2 border-black rounded-xl px-4 py-3 text-sm text-black font-semibold focus:outline-none"
-              >
-                <option value="">— Select reference set —</option>
-                {refSets.items.map((rs: ReferenceSet) => (
-                  <option key={rs.id} value={rs.id}>
-                    {rs.source_type === "uploaded_gt" ? "📁 Uploaded GT" : "👤 Student Ref"} · {rs.id.slice(0, 8)}…
-                    {" "}({new Date(rs.created_at).toLocaleDateString()})
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          {/* Submission upload selector */}
-          <div>
-            <label className="block text-xs font-black text-black uppercase tracking-wider mb-2">
-              Student Submissions Upload
-            </label>
-            {loadingUploads ? (
-              <p className="text-xs text-gray-500 font-semibold">Loading…</p>
-            ) : !submissionUploads.length ? (
-              <div className="border-2 border-black rounded-xl p-3 bg-neo-bg">
-                <p className="text-xs font-bold text-gray-600">No ingested uploads yet.</p>
-                <p className="text-xs text-gray-400 mt-0.5">Upload a CVAT ZIP in the ZIP Upload tab first.</p>
-              </div>
-            ) : (
-              <select
-                value={selectedUploadId}
-                onChange={(e) => setSelectedUploadId(e.target.value)}
-                className="w-full bg-neo-bg border-2 border-black rounded-xl px-4 py-3 text-sm text-black font-semibold focus:outline-none"
-              >
-                <option value="">— Select upload —</option>
-                {submissionUploads.map((u: Upload) => (
-                  <option key={u.id} value={u.id}>
-                    {u.id.slice(0, 8)}… · {u.total_count} images
-                    {" "}({new Date(u.created_at).toLocaleDateString()})
-                  </option>
-                ))}
-              </select>
-            )}
+        {/* ── Step 1: GT mode ─────────────────────────────────────────── */}
+        <div>
+          <label className="block text-xs font-black text-black uppercase tracking-wider mb-3">
+            Step 1 — Ground Truth Source
+          </label>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setGtMode("student_reference")}
+              className={`flex-1 py-3 px-4 rounded-2xl border-2 border-black text-sm font-black transition-all ${
+                gtMode === "student_reference"
+                  ? "bg-neo-blue text-white shadow-neo-sm -translate-y-0.5"
+                  : "bg-neo-bg text-gray-600 hover:bg-neo-yellow hover:text-black"
+              }`}
+            >
+              👤 Use a Student's Data as GT
+            </button>
+            <button
+              onClick={() => setGtMode("uploaded_gt")}
+              className={`flex-1 py-3 px-4 rounded-2xl border-2 border-black text-sm font-black transition-all ${
+                gtMode === "uploaded_gt"
+                  ? "bg-neo-blue text-white shadow-neo-sm -translate-y-0.5"
+                  : "bg-neo-bg text-gray-600 hover:bg-neo-yellow hover:text-black"
+              }`}
+            >
+              📁 Use Uploaded GT ZIP
+            </button>
           </div>
         </div>
 
+        {/* ── Step 2: pick GT student (if student_reference mode) ──────── */}
+        {gtMode === "student_reference" && (
+          <div>
+            <label className="block text-xs font-black text-black uppercase tracking-wider mb-2">
+              Step 2 — Select Student to Use as Ground Truth
+            </label>
+            {loadingStudents ? (
+              <p className="text-xs font-semibold text-gray-500">Loading students…</p>
+            ) : !students?.items?.length ? (
+              <div className="border-2 border-black rounded-xl p-3 bg-neo-bg">
+                <p className="text-xs font-bold text-gray-600">No students yet.</p>
+                <p className="text-xs text-gray-400 mt-0.5">Upload a CVAT ZIP first to populate students.</p>
+              </div>
+            ) : (
+              <select
+                value={selectedStudentId}
+                onChange={(e) => setSelectedStudentId(e.target.value)}
+                className="w-full bg-neo-bg border-2 border-black rounded-xl px-4 py-3 text-sm text-black font-semibold focus:outline-none"
+              >
+                <option value="">— Select GT student —</option>
+                {students.items.map((s: Student) => (
+                  <option key={s.id} value={s.id}>
+                    {s.display_name ?? s.username ?? s.id.slice(0, 8)}
+                    {s.username ? ` (@${s.username})` : ""}
+                  </option>
+                ))}
+              </select>
+            )}
+            {selectedStudentId && (
+              <p className="text-xs font-semibold text-gray-500 mt-1.5">
+                ℹ️ A new reference set will be created automatically from this student's annotations.
+              </p>
+            )}
+          </div>
+        )}
+
+        {gtMode === "uploaded_gt" && (
+          <div>
+            <label className="block text-xs font-black text-black uppercase tracking-wider mb-2">
+              Step 2 — Uploaded GT Reference Set
+            </label>
+            {loadingRefSets ? (
+              <p className="text-xs font-semibold text-gray-500">Loading…</p>
+            ) : !refSets?.items?.filter((rs: ReferenceSet) => rs.source_type === "uploaded_gt").length ? (
+              <div className="border-2 border-black rounded-xl p-3 bg-neo-bg">
+                <p className="text-xs font-bold text-gray-600">No uploaded GT reference sets yet.</p>
+                <p className="text-xs text-gray-400 mt-0.5 font-mono">
+                  POST /api/projects/{"{id}"}/reference-sets with source_type: "uploaded_gt"
+                </p>
+              </div>
+            ) : (
+              <div className="border-2 border-black rounded-xl p-3 bg-neo-mint/20">
+                <p className="text-xs font-bold text-black">
+                  ✅ {refSets.items.filter((rs: ReferenceSet) => rs.source_type === "uploaded_gt").length} uploaded GT reference set(s) found.
+                  The most recent one will be used.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Step 3: pick submission upload ──────────────────────────── */}
+        <div>
+          <label className="block text-xs font-black text-black uppercase tracking-wider mb-2">
+            Step 3 — Student Submissions Upload (to compare)
+          </label>
+          {loadingUploads ? (
+            <p className="text-xs font-semibold text-gray-500">Loading uploads…</p>
+          ) : !submissionUploads.length ? (
+            <div className="border-2 border-black rounded-xl p-3 bg-neo-bg">
+              <p className="text-xs font-bold text-gray-600">No ingested uploads yet.</p>
+              <p className="text-xs text-gray-400 mt-0.5">Upload a CVAT ZIP in the ZIP Upload tab first and wait for ingestion to complete.</p>
+            </div>
+          ) : (
+            <select
+              value={selectedUploadId}
+              onChange={(e) => setSelectedUploadId(e.target.value)}
+              className="w-full bg-neo-bg border-2 border-black rounded-xl px-4 py-3 text-sm text-black font-semibold focus:outline-none"
+            >
+              <option value="">— Select submissions upload —</option>
+              {submissionUploads.map((u: Upload) => (
+                <option key={u.id} value={u.id}>
+                  {u.id.slice(0, 8)}… · {u.total_count} images · {new Date(u.created_at).toLocaleDateString()}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {/* ── Trigger button ───────────────────────────────────────────── */}
         <button
-          onClick={() => triggerMutation.mutate()}
+          onClick={handleTrigger}
           disabled={!canTrigger}
           className="flex items-center gap-2 bg-neo-yellow hover:bg-yellow-400 disabled:opacity-40 disabled:cursor-not-allowed text-black font-black text-sm rounded-2xl px-6 py-3 border-2 border-black shadow-neo transition-transform hover:-translate-y-1 disabled:hover:translate-y-0"
         >
-          <Play size={14} />
-          {triggerMutation.isPending ? "Triggering…" : "Run Comparison"}
+          {isBusy
+            ? <><RefreshCw size={14} className="animate-spin" /> Setting up reference…</>
+            : <><Play size={14} /> Run Comparison</>
+          }
         </button>
       </div>
 
-      {/* Dashboard link */}
+      {/* ── Dashboard link ───────────────────────────────────────────────── */}
       <div className="bg-neo-bg border-2 border-black rounded-2xl p-4 flex items-center justify-between">
         <p className="text-sm font-bold text-gray-700">View results, charts and student leaderboard</p>
         <Link
