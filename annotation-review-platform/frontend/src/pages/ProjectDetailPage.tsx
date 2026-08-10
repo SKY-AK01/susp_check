@@ -92,10 +92,19 @@ export default function ProjectDetailPage() {
 /* ── ZIP Upload Panel ─────────────────────────────────────────────────────── */
 
 function ZipUploadPanel({ projectId }: { projectId: string }) {
+  const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Upload history
+  const { data: uploadHistory, isLoading: loadingHistory } = useQuery({
+    queryKey: ["uploads", projectId],
+    queryFn: () => uploadsApi.list(projectId).then((r) => r.data),
+  });
+
+  const zipUploads = (uploadHistory?.items ?? []).filter((u: Upload) => !u.is_reference);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -117,13 +126,17 @@ function ZipUploadPanel({ projectId }: { projectId: string }) {
       setProgress("Finalising…");
       await uploadsApi.finalize(uploadId);
       setProgress("Accepted — ingestion running in background.");
+      qc.invalidateQueries({ queryKey: ["uploads", projectId] });
       const ws = new WebSocket(
         `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/progress/upload/${uploadId}`
       );
       ws.onmessage = (ev) => {
         const d = JSON.parse(ev.data);
         setProgress(`${d.status} — ${d.processed_count}/${d.total_count} images (${Math.round(d.progress_pct)}%)`);
-        if (["ingested", "failed", "partially_failed"].includes(d.status)) ws.close();
+        if (["ingested", "failed", "partially_failed"].includes(d.status)) {
+          ws.close();
+          qc.invalidateQueries({ queryKey: ["uploads", projectId] });
+        }
       };
       ws.onerror = () => ws.close();
     } catch {
@@ -134,27 +147,92 @@ function ZipUploadPanel({ projectId }: { projectId: string }) {
     }
   }
 
+  const statusBadge = (u: Upload) => {
+    const cfg: Record<string, { color: string; label: string }> = {
+      ingested:         { color: "bg-neo-teal text-white",   label: "Ingested" },
+      processing:       { color: "bg-neo-blue text-white",   label: "Processing" },
+      pending:          { color: "bg-neo-yellow text-black", label: "Pending" },
+      failed:           { color: "bg-neo-red text-white",    label: "Failed" },
+      partially_failed: { color: "bg-neo-orange text-white", label: "Partial" },
+    };
+    const c = cfg[u.status] ?? { color: "bg-gray-200 text-black", label: u.status };
+    return (
+      <span className={`text-xs font-black px-2.5 py-0.5 rounded-full border-2 border-black ${c.color}`}>
+        {c.label}
+      </span>
+    );
+  };
+
   return (
-    <div className="bg-white border-2 border-black rounded-2xl shadow-neo p-6 space-y-5">
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-neo-orange border-2 border-black flex items-center justify-center shadow-neo-sm">
-          <UploadIcon size={16} className="text-white" />
+    <div className="space-y-5">
+      {/* Upload widget */}
+      <div className="bg-white border-2 border-black rounded-2xl shadow-neo p-6 space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-neo-orange border-2 border-black flex items-center justify-center shadow-neo-sm">
+            <UploadIcon size={16} className="text-white" />
+          </div>
+          <h2 className="text-sm font-black text-black uppercase tracking-widest">Upload CVAT Export ZIP</h2>
         </div>
-        <h2 className="text-sm font-black text-black uppercase tracking-widest">Upload CVAT Export ZIP</h2>
+        <p className="text-xs font-semibold text-gray-600">
+          Export your CVAT project as a ZIP (project-level XML export) and upload it here.
+          Ingestion runs in the background.
+        </p>
+        {error && <Alert type="error">{error}</Alert>}
+        {progress && <Alert type="info">{progress}</Alert>}
+        <label className="inline-flex items-center gap-2 bg-neo-orange hover:bg-orange-500 text-white font-black text-sm rounded-2xl px-5 py-2.5 border-2 border-black shadow-neo cursor-pointer transition-transform hover:-translate-y-1">
+          <UploadIcon size={14} />
+          {uploading ? "Uploading…" : "Select ZIP"}
+          <input ref={fileRef} type="file" accept=".zip" className="hidden"
+            onChange={handleUpload} disabled={uploading} />
+        </label>
+        <p className="text-xs font-semibold text-gray-400">Files are uploaded in 5 MB chunks automatically.</p>
       </div>
-      <p className="text-xs font-semibold text-gray-600">
-        Export your CVAT project as a ZIP (project-level XML export) and upload it here.
-        Ingestion runs in the background.
-      </p>
-      {error && <Alert type="error">{error}</Alert>}
-      {progress && <Alert type="info">{progress}</Alert>}
-      <label className="inline-flex items-center gap-2 bg-neo-orange hover:bg-orange-500 text-white font-black text-sm rounded-2xl px-5 py-2.5 border-2 border-black shadow-neo cursor-pointer transition-transform hover:-translate-y-1">
-        <UploadIcon size={14} />
-        {uploading ? "Uploading…" : "Select ZIP"}
-        <input ref={fileRef} type="file" accept=".zip" className="hidden"
-          onChange={handleUpload} disabled={uploading} />
-      </label>
-      <p className="text-xs font-semibold text-gray-400">Files are uploaded in 5 MB chunks automatically.</p>
+
+      {/* Upload history */}
+      <div className="bg-white border-2 border-black rounded-2xl shadow-neo overflow-hidden">
+        <div className="px-5 py-3 border-b-2 border-black bg-neo-orange flex items-center justify-between">
+          <p className="text-xs font-black text-white uppercase tracking-wider">Upload History</p>
+          <p className="text-xs text-orange-100 font-semibold">{zipUploads.length} upload{zipUploads.length !== 1 ? "s" : ""}</p>
+        </div>
+        {loadingHistory ? (
+          <div className="flex items-center gap-3 p-5">
+            <div className="animate-spin rounded-full h-4 w-4 border-4 border-black border-t-transparent" />
+            <p className="text-xs font-semibold text-gray-500">Loading history…</p>
+          </div>
+        ) : zipUploads.length === 0 ? (
+          <div className="p-6 text-center">
+            <p className="text-sm font-bold text-gray-400">No uploads yet.</p>
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-neo-bg border-b-2 border-black text-xs text-black uppercase font-black">
+              <tr>
+                <th className="px-4 py-2 text-left">Upload ID</th>
+                <th className="px-4 py-2 text-left">Uploaded</th>
+                <th className="px-4 py-2 text-right">Images</th>
+                <th className="px-4 py-2 text-right">Progress</th>
+                <th className="px-4 py-2 text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {zipUploads.map((u: Upload) => (
+                <tr key={u.id} className="hover:bg-neo-bg transition-colors">
+                  <td className="px-4 py-3 font-mono text-xs text-black font-black">{u.id.slice(0, 8)}…</td>
+                  <td className="px-4 py-3 text-xs font-semibold text-gray-600">
+                    <div>{new Date(u.created_at).toLocaleDateString()}</div>
+                    <div className="text-gray-400">{new Date(u.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+                  </td>
+                  <td className="px-4 py-3 text-right font-black font-mono text-xs text-black">{u.total_count || "—"}</td>
+                  <td className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
+                    {u.status === "processing" ? `${Math.round(u.progress_pct)}%` : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-right">{statusBadge(u)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }
@@ -269,17 +347,42 @@ function DirectImagePanel({ projectId }: { projectId: string }) {
       </div>
 
       {existing && existing.length > 0 && (
-        <div className="bg-white border-2 border-black rounded-2xl shadow-neo p-5">
-          <p className="text-xs font-black text-black uppercase tracking-wider mb-4">
-            Stored Images ({existing.length})
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-72 overflow-y-auto">
-            {existing.map((img) => (
-              <a key={img.content_hash} href={img.url} target="_blank" rel="noreferrer"
-                className="group block border-2 border-black rounded-xl overflow-hidden hover:-translate-y-1 transition-transform shadow-neo-sm">
-                <img src={img.url} alt={img.raw_filename} className="w-full h-20 object-cover bg-neo-bg" loading="lazy" />
-                <p className="text-xs font-black text-gray-600 px-2 py-1 truncate group-hover:text-black">{img.normalized_key}</p>
-              </a>
+        <div className="bg-white border-2 border-black rounded-2xl shadow-neo overflow-hidden">
+          <div className="px-5 py-3 border-b-2 border-black bg-neo-teal flex items-center justify-between">
+            <p className="text-xs font-black text-white uppercase tracking-wider">
+              Image Upload History
+            </p>
+            <p className="text-xs text-teal-100 font-semibold">{existing.length} image{existing.length !== 1 ? "s" : ""} stored</p>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {existing.map((img, i) => (
+              <div key={img.content_hash} className="flex items-center gap-4 px-4 py-3 hover:bg-neo-bg transition-colors">
+                {/* Thumbnail */}
+                <a href={img.url} target="_blank" rel="noreferrer" className="shrink-0">
+                  <img
+                    src={img.url}
+                    alt={img.raw_filename}
+                    className="w-12 h-12 object-cover rounded-xl border-2 border-black shadow-neo-sm"
+                    loading="lazy"
+                  />
+                </a>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black text-black font-mono truncate">{img.raw_filename}</p>
+                  <p className="text-xs font-semibold text-gray-400 font-mono truncate">{img.normalized_key}</p>
+                </div>
+                {/* Row number */}
+                <span className="text-xs font-black text-gray-400 font-mono shrink-0">#{i + 1}</span>
+                {/* Link */}
+                <a
+                  href={img.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-black text-neo-blue underline decoration-2 underline-offset-2 hover:text-blue-800 shrink-0"
+                >
+                  View
+                </a>
+              </div>
             ))}
           </div>
         </div>
@@ -376,247 +479,206 @@ function RunsPanel({ projectId }: { projectId: string }) {
   const qc = useQueryClient();
 
   // ── state ──────────────────────────────────────────────────────────────────
-  const [gtMode, setGtMode] = useState<"uploaded_gt" | "student_reference">("student_reference");
-  const [selectedStudentId, setSelectedStudentId] = useState("");   // for student_reference mode
+  const [selectedStudentId, setSelectedStudentId] = useState("");
   const [selectedUploadId, setSelectedUploadId] = useState("");
   const [triggeredRunId, setTriggeredRunId] = useState<string | null>(null);
   const [triggerError, setTriggerError] = useState<string | null>(null);
-  const [creatingRefSet, setCreatingRefSet] = useState(false);
+  const [isBusy, setIsBusy] = useState(false);
 
   // ── data queries ───────────────────────────────────────────────────────────
-  const { data: project } = useQuery({
-    queryKey: ["project", projectId],
-    queryFn: () => projectsApi.get(projectId!).then((r) => r.data),
-  });
-
   const { data: students, isLoading: loadingStudents } = useQuery({
     queryKey: ["students", projectId],
     queryFn: () => studentsApi.list(projectId, undefined, 200, 0).then((r) => r.data),
   });
 
-  const { data: uploads, isLoading: loadingUploads } = useQuery({
+  // Try to load uploads — works after backend is deployed, graceful fallback otherwise
+  const { data: uploads } = useQuery({
     queryKey: ["uploads", projectId],
     queryFn: () => uploadsApi.list(projectId).then((r) => r.data),
+    retry: false,
   });
 
-  const { data: refSets, isLoading: loadingRefSets, refetch: refetchRefSets } = useQuery({
+  const { data: refSets, refetch: refetchRefSets } = useQuery({
     queryKey: ["reference-sets", projectId],
     queryFn: () => referenceSetsApi.list(projectId).then((r) => r.data),
   });
 
-  // ── derived data ───────────────────────────────────────────────────────────
-  const submissionUploads = (uploads?.items ?? []).filter(
-    (u: Upload) => !u.is_reference && u.status === "ingested"
+  // ── derived ────────────────────────────────────────────────────────────────
+  // All non-reference uploads that have been processed (any non-pending status)
+  const availableUploads = (uploads?.items ?? []).filter(
+    (u: Upload) => !u.is_reference && u.status !== "pending"
   );
 
-  // ── Step 1: create ref set from selected student, then trigger run ─────────
+  // If uploads API not available yet, derive unique upload IDs from students
+  const studentUploadIds: string[] = students?.items
+    ? [...new Set(students.items.map((s: Student) => s.id).filter(Boolean))]
+    : [];
+
+  // Selected student display name
+  const selectedStudent = students?.items?.find((s: Student) => s.id === selectedStudentId);
+
+  // ── trigger ────────────────────────────────────────────────────────────────
   async function handleTrigger() {
     setTriggerError(null);
     setTriggeredRunId(null);
 
-    if (!selectedUploadId) {
-      setTriggerError("Please select a student submissions upload.");
+    if (!selectedStudentId) {
+      setTriggerError("Please select which student's data to use as Ground Truth.");
       return;
     }
 
+    // Upload ID: from selector if available, else backend will auto-pick latest
+    const uploadId = selectedUploadId || availableUploads[0]?.id || undefined;
+
+    setIsBusy(true);
     try {
-      let refSetId = "";
+      // Auto-create reference set from selected student
+      const refSetRes = await referenceSetsApi.create(projectId, {
+        source_type: "student",
+        reference_student_id: selectedStudentId,
+      });
+      await refetchRefSets();
 
-      if (gtMode === "student_reference") {
-        if (!selectedStudentId) {
-          setTriggerError("Please select which student's data to use as Ground Truth.");
-          return;
-        }
-        setCreatingRefSet(true);
-        // Create a reference set using selected student as GT
-        const refSetRes = await referenceSetsApi.create(projectId, {
-          source_type: "student",
-          reference_student_id: selectedStudentId,
-        });
-        refSetId = refSetRes.data.id;
-        await refetchRefSets();
-      } else {
-        // uploaded_gt — use most recent ref set of uploaded_gt type
-        const uploadedGtSet = refSets?.items?.find(
-          (rs: ReferenceSet) => rs.source_type === "uploaded_gt"
-        );
-        if (!uploadedGtSet) {
-          setTriggerError("No uploaded GT reference set found. Upload a reference ZIP first or switch to Student Reference mode.");
-          return;
-        }
-        refSetId = uploadedGtSet.id;
-      }
-
-      setCreatingRefSet(false);
-
-      const runRes = await runsApi.trigger(refSetId, selectedUploadId);
+      // Trigger run — pass upload_id only if user explicitly selected one,
+      // otherwise backend auto-picks the latest ingested upload
+      const uploadId = selectedUploadId || availableUploads[0]?.id || undefined;
+      const runRes = await runsApi.trigger(refSetRes.data.id, uploadId);
       setTriggeredRunId(runRes.data.id);
       qc.invalidateQueries({ queryKey: ["runs", projectId] });
     } catch (err: any) {
-      setCreatingRefSet(false);
-      setTriggerError(err?.response?.data?.detail ?? "Failed to trigger run. Please try again.");
+      const detail = err?.response?.data?.detail;
+      setTriggerError(
+        typeof detail === "string"
+          ? detail
+          : "Failed to trigger run. Please try again."
+      );
+    } finally {
+      setIsBusy(false);
     }
   }
 
-  const isBusy = creatingRefSet;
-  const canTrigger =
-    selectedUploadId &&
-    (gtMode === "uploaded_gt" || (gtMode === "student_reference" && selectedStudentId)) &&
-    !isBusy;
+  const canTrigger = !!selectedStudentId && !isBusy;
 
+  // ── render ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      {/* ── Trigger card ─────────────────────────────────────────────────── */}
       <div className="bg-white border-2 border-black rounded-2xl shadow-neo p-6 space-y-6">
+
+        {/* Header */}
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-neo-yellow border-2 border-black flex items-center justify-center shadow-neo-sm">
             <Play size={16} className="text-black" />
           </div>
-          <h2 className="text-sm font-black text-black uppercase tracking-widest">Trigger Comparison Run</h2>
+          <div>
+            <h2 className="text-sm font-black text-black uppercase tracking-widest">Run Comparison</h2>
+            <p className="text-xs font-semibold text-gray-500 mt-0.5">
+              Pick one student as the ground truth. All other students in the same upload will be compared against them.
+            </p>
+          </div>
         </div>
 
         {triggerError && <Alert type="error">{triggerError}</Alert>}
         {triggeredRunId && (
           <Alert type="success">
-            ✅ Run triggered!{" "}
+            ✅ Run started!{" "}
             <Link to={`/runs/${triggeredRunId}/results`} className="underline font-black">
               View results →
             </Link>
           </Alert>
         )}
 
-        {/* ── Step 1: GT mode ─────────────────────────────────────────── */}
+        {/* ── Step 1: Select GT student ──────────────────────────────── */}
         <div>
-          <label className="block text-xs font-black text-black uppercase tracking-wider mb-3">
-            Step 1 — Ground Truth Source
+          <label className="block text-xs font-black text-black uppercase tracking-wider mb-2">
+            Step 1 — Which student's data is the Ground Truth?
           </label>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setGtMode("student_reference")}
-              className={`flex-1 py-3 px-4 rounded-2xl border-2 border-black text-sm font-black transition-all ${
-                gtMode === "student_reference"
-                  ? "bg-neo-blue text-white shadow-neo-sm -translate-y-0.5"
-                  : "bg-neo-bg text-gray-600 hover:bg-neo-yellow hover:text-black"
-              }`}
-            >
-              👤 Use a Student's Data as GT
-            </button>
-            <button
-              onClick={() => setGtMode("uploaded_gt")}
-              className={`flex-1 py-3 px-4 rounded-2xl border-2 border-black text-sm font-black transition-all ${
-                gtMode === "uploaded_gt"
-                  ? "bg-neo-blue text-white shadow-neo-sm -translate-y-0.5"
-                  : "bg-neo-bg text-gray-600 hover:bg-neo-yellow hover:text-black"
-              }`}
-            >
-              📁 Use Uploaded GT ZIP
-            </button>
-          </div>
-        </div>
-
-        {/* ── Step 2: pick GT student (if student_reference mode) ──────── */}
-        {gtMode === "student_reference" && (
-          <div>
-            <label className="block text-xs font-black text-black uppercase tracking-wider mb-2">
-              Step 2 — Select Student to Use as Ground Truth
-            </label>
-            {loadingStudents ? (
+          {loadingStudents ? (
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-4 border-black border-t-transparent" />
               <p className="text-xs font-semibold text-gray-500">Loading students…</p>
-            ) : !students?.items?.length ? (
-              <div className="border-2 border-black rounded-xl p-3 bg-neo-bg">
-                <p className="text-xs font-bold text-gray-600">No students yet.</p>
-                <p className="text-xs text-gray-400 mt-0.5">Upload a CVAT ZIP first to populate students.</p>
-              </div>
-            ) : (
+            </div>
+          ) : !students?.items?.length ? (
+            <div className="border-2 border-black rounded-xl p-4 bg-neo-bg text-center">
+              <p className="text-sm font-black text-black">No students yet</p>
+              <p className="text-xs font-semibold text-gray-500 mt-1">
+                Upload a CVAT ZIP in the ZIP Upload tab first. The system will automatically extract all students from it.
+              </p>
+            </div>
+          ) : (
+            <>
               <select
                 value={selectedStudentId}
                 onChange={(e) => setSelectedStudentId(e.target.value)}
                 className="w-full bg-neo-bg border-2 border-black rounded-xl px-4 py-3 text-sm text-black font-semibold focus:outline-none"
               >
-                <option value="">— Select GT student —</option>
+                <option value="">— Select the student to use as GT —</option>
                 {students.items.map((s: Student) => (
                   <option key={s.id} value={s.id}>
-                    {s.display_name ?? s.username ?? s.id.slice(0, 8)}
-                    {s.username ? ` (@${s.username})` : ""}
+                    {s.display_name
+                      ? `${s.display_name}${s.username ? ` (@${s.username})` : ""}`
+                      : s.username ?? `Student ${s.id.slice(0, 8)}`}
                   </option>
                 ))}
               </select>
-            )}
-            {selectedStudentId && (
-              <p className="text-xs font-semibold text-gray-500 mt-1.5">
-                ℹ️ A new reference set will be created automatically from this student's annotations.
-              </p>
-            )}
-          </div>
-        )}
+              {selectedStudentId && (
+                <div className="mt-2 flex items-center gap-2 bg-neo-blue/10 border-2 border-neo-blue rounded-xl px-3 py-2">
+                  <span className="text-lg">👑</span>
+                  <div>
+                    <p className="text-xs font-black text-black">
+                      {selectedStudent?.display_name ?? selectedStudent?.username ?? "Selected student"} will be the reference (GT)
+                    </p>
+                    <p className="text-xs font-semibold text-gray-500">
+                      All other students will be compared against their annotations
+                    </p>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
-        {gtMode === "uploaded_gt" && (
+        {/* ── Step 2: Pick upload (only shown if multiple uploads exist) ─ */}
+        {availableUploads.length > 1 && (
           <div>
             <label className="block text-xs font-black text-black uppercase tracking-wider mb-2">
-              Step 2 — Uploaded GT Reference Set
+              Step 2 — Which upload to compare? (optional)
             </label>
-            {loadingRefSets ? (
-              <p className="text-xs font-semibold text-gray-500">Loading…</p>
-            ) : !refSets?.items?.filter((rs: ReferenceSet) => rs.source_type === "uploaded_gt").length ? (
-              <div className="border-2 border-black rounded-xl p-3 bg-neo-bg">
-                <p className="text-xs font-bold text-gray-600">No uploaded GT reference sets yet.</p>
-                <p className="text-xs text-gray-400 mt-0.5 font-mono">
-                  POST /api/projects/{"{id}"}/reference-sets with source_type: "uploaded_gt"
-                </p>
-              </div>
-            ) : (
-              <div className="border-2 border-black rounded-xl p-3 bg-neo-mint/20">
-                <p className="text-xs font-bold text-black">
-                  ✅ {refSets.items.filter((rs: ReferenceSet) => rs.source_type === "uploaded_gt").length} uploaded GT reference set(s) found.
-                  The most recent one will be used.
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Step 3: pick submission upload ──────────────────────────── */}
-        <div>
-          <label className="block text-xs font-black text-black uppercase tracking-wider mb-2">
-            Step 3 — Student Submissions Upload (to compare)
-          </label>
-          {loadingUploads ? (
-            <p className="text-xs font-semibold text-gray-500">Loading uploads…</p>
-          ) : !submissionUploads.length ? (
-            <div className="border-2 border-black rounded-xl p-3 bg-neo-bg">
-              <p className="text-xs font-bold text-gray-600">No ingested uploads yet.</p>
-              <p className="text-xs text-gray-400 mt-0.5">Upload a CVAT ZIP in the ZIP Upload tab first and wait for ingestion to complete.</p>
-            </div>
-          ) : (
             <select
               value={selectedUploadId}
               onChange={(e) => setSelectedUploadId(e.target.value)}
               className="w-full bg-neo-bg border-2 border-black rounded-xl px-4 py-3 text-sm text-black font-semibold focus:outline-none"
             >
-              <option value="">— Select submissions upload —</option>
-              {submissionUploads.map((u: Upload) => (
+              <option value="">— Latest upload (default) —</option>
+              {availableUploads.map((u: Upload) => (
                 <option key={u.id} value={u.id}>
                   {u.id.slice(0, 8)}… · {u.total_count} images · {new Date(u.created_at).toLocaleDateString()}
                 </option>
               ))}
             </select>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* ── Trigger button ───────────────────────────────────────────── */}
+        {/* ── Trigger button ─────────────────────────────────────────── */}
         <button
           onClick={handleTrigger}
           disabled={!canTrigger}
-          className="flex items-center gap-2 bg-neo-yellow hover:bg-yellow-400 disabled:opacity-40 disabled:cursor-not-allowed text-black font-black text-sm rounded-2xl px-6 py-3 border-2 border-black shadow-neo transition-transform hover:-translate-y-1 disabled:hover:translate-y-0"
+          className="flex items-center gap-2 bg-neo-yellow hover:bg-yellow-400 disabled:opacity-40 disabled:cursor-not-allowed text-black font-black text-base rounded-2xl px-8 py-3 border-2 border-black shadow-neo transition-transform hover:-translate-y-1 disabled:hover:translate-y-0"
         >
           {isBusy
-            ? <><RefreshCw size={14} className="animate-spin" /> Setting up reference…</>
-            : <><Play size={14} /> Run Comparison</>
+            ? <><RefreshCw size={16} className="animate-spin" /> Setting up & running…</>
+            : <><Play size={16} /> Run Comparison</>
           }
         </button>
+
+        {students?.items?.length > 0 && (
+          <p className="text-xs font-semibold text-gray-400">
+            {students.items.length} student{students.items.length !== 1 ? "s" : ""} found in this project.
+            {" "}The selected GT student will be excluded from the results — only the others will be compared.
+          </p>
+        )}
       </div>
 
-      {/* ── Dashboard link ───────────────────────────────────────────────── */}
+      {/* ── Previous runs & dashboard link ───────────────────────────────── */}
       <div className="bg-neo-bg border-2 border-black rounded-2xl p-4 flex items-center justify-between">
         <p className="text-sm font-bold text-gray-700">View results, charts and student leaderboard</p>
         <Link

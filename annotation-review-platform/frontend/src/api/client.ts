@@ -168,8 +168,8 @@ export const uploadsApi = {
 };
 
 export const runsApi = {
-  trigger: (refSetId: string, uploadId: string) =>
-    api.post<ComparisonRun>(`/reference-sets/${refSetId}/runs`, { upload_id: uploadId }),
+  trigger: (refSetId: string, uploadId?: string) =>
+    api.post<ComparisonRun>(`/reference-sets/${refSetId}/runs`, uploadId ? { upload_id: uploadId } : {}),
   get: (runId: string) => api.get<ComparisonRun>(`/runs/${runId}`),
   results: (
     runId: string,

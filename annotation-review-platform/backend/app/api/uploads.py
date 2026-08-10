@@ -27,6 +27,27 @@ from app.workers.ingestion_tasks import ingest_upload
 router = APIRouter(tags=["uploads"])
 
 
+@router.get("/api/projects/{project_id}/uploads", response_model=Page[UploadOut])
+async def list_project_uploads(
+    project_id: uuid.UUID,
+    pagination: PaginationParams = Depends(),
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_any),
+):
+    """List all uploads for a project, newest first — §11.2."""
+    from sqlalchemy import desc
+    total = (await db.execute(
+        select(func.count(Upload.id)).where(Upload.project_id == project_id)
+    )).scalar_one()
+    rows = (await db.execute(
+        select(Upload)
+        .where(Upload.project_id == project_id)
+        .order_by(desc(Upload.created_at))
+        .offset(pagination.offset).limit(pagination.limit)
+    )).scalars().all()
+    return Page.build(items=rows, total=total, limit=pagination.limit, offset=pagination.offset)
+
+
 @router.post("/api/projects/{project_id}/uploads", response_model=UploadOut, status_code=202)
 async def initiate_upload(
     project_id: uuid.UUID,

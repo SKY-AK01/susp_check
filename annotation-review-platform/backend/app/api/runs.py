@@ -35,10 +35,29 @@ async def trigger_run(
     if not ref_set:
         raise HTTPException(status_code=404, detail="ReferenceSet not found")
 
+    # If upload_id not provided, derive it from the most recent ingested upload for this project
+    upload_id = body.upload_id
+    if upload_id is None:
+        from app.models.upload import Upload as UploadModel, UploadStatus
+        from sqlalchemy import desc
+        latest_upload = (await db.execute(
+            select(UploadModel)
+            .where(
+                UploadModel.project_id == ref_set.project_id,
+                UploadModel.is_reference == False,
+                UploadModel.status.in_([UploadStatus.ingested, UploadStatus.partially_failed]),
+            )
+            .order_by(desc(UploadModel.created_at))
+            .limit(1)
+        )).scalar_one_or_none()
+        if not latest_upload:
+            raise HTTPException(status_code=400, detail="No ingested upload found for this project. Upload a CVAT ZIP first.")
+        upload_id = latest_upload.id
+
     run = ComparisonRun(
         project_id=ref_set.project_id,
         reference_set_id=ref_set_id,
-        upload_id=body.upload_id,
+        upload_id=upload_id,
         status=RunStatus.pending,
     )
     db.add(run)
@@ -47,7 +66,7 @@ async def trigger_run(
     db.add(AuditLog(
         actor_id=current_user.id, action="trigger_run",
         entity_type="comparison_run", entity_id=str(run.id),
-        metadata_={"upload_id": str(body.upload_id)},
+        metadata_={"upload_id": str(upload_id)},
     ))
     await db.flush()
 

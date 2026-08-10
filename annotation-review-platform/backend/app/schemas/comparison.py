@@ -24,7 +24,7 @@ class ReferenceSetOut(BaseModel):
 
 
 class RunCreate(BaseModel):
-    upload_id: uuid.UUID   # the student-submissions upload to evaluate
+    upload_id: Optional[uuid.UUID] = None   # if None, latest ingested upload is used automatically
 
 
 class ComparisonRunOut(BaseModel):
