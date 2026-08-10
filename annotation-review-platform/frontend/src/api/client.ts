@@ -161,6 +161,8 @@ export const uploadsApi = {
   finalize: (uploadId: string) =>
     api.post<Upload>(`/uploads/${uploadId}/complete`),
   get: (uploadId: string) => api.get<Upload>(`/uploads/${uploadId}`),
+  list: (projectId: string, limit = 50, offset = 0) =>
+    api.get<Page<Upload>>(`/projects/${projectId}/uploads`, { params: { limit, offset } }),
   warnings: (uploadId: string, limit = 50, offset = 0) =>
     api.get(`/uploads/${uploadId}/warnings`, { params: { limit, offset } }),
 };
@@ -185,6 +187,31 @@ export const runsApi = {
   result: (runId: string, resultId: string) =>
     api.get<ComparisonResult>(`/runs/${runId}/results/${resultId}`),
   summary: (runId: string) => api.get(`/runs/${runId}/summary`),
+};
+
+// ── Reference Sets ────────────────────────────────────────────────────────────
+
+export type ReferenceSourceType = "uploaded_gt" | "student";
+
+export interface ReferenceSet {
+  id: string;
+  project_id: string;
+  source_type: ReferenceSourceType;
+  reference_upload_id?: string;
+  reference_student_id?: string;
+  created_at: string;
+}
+
+export const referenceSetsApi = {
+  list: (projectId: string, limit = 50, offset = 0) =>
+    api.get<Page<ReferenceSet>>(`/projects/${projectId}/reference-sets`, {
+      params: { limit, offset },
+    }),
+  create: (projectId: string, body: {
+    source_type: ReferenceSourceType;
+    reference_upload_id?: string;
+    reference_student_id?: string;
+  }) => api.post<ReferenceSet>(`/projects/${projectId}/reference-sets`, body),
 };
 
 export const imagesApi = {

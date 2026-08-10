@@ -4,11 +4,11 @@ import { runsApi } from "../api/client";
 import ResultsTable from "../components/ResultsTable/ResultsTable";
 
 const VERDICT_PASTELS: Record<string, string> = {
-  exact_match: "bg-neo-mint",
+  exact_match: "bg-neo-teal",
   minor_difference: "bg-neo-yellow",
-  significant_difference: "bg-neo-peach",
-  missing: "bg-red-200",
-  extra: "bg-neo-lavender",
+  significant_difference: "bg-neo-orange",
+  missing: "bg-neo-red",
+  extra: "bg-neo-purple",
   needs_manual_review: "bg-gray-200",
 };
 
@@ -64,10 +64,10 @@ export default function RunResultsPage() {
           {Object.entries(summary.by_verdict).map(([verdict, count]) => (
             <div
               key={verdict}
-              className={`${VERDICT_PASTELS[verdict] ?? "bg-white"} border-4 border-black rounded-2xl px-5 py-4 min-w-[140px] shadow-neo hover:-translate-y-1 transition-transform`}
+              className={`${VERDICT_PASTELS[verdict] ?? "bg-white"} border-2 border-black rounded-2xl px-5 py-4 min-w-[140px] shadow-neo hover:-translate-y-1 transition-transform`}
             >
-              <p className="text-xs font-black text-black uppercase tracking-wide">{verdict.replace(/_/g, " ")}</p>
-              <p className="text-3xl font-black text-black mt-1">{count as number}</p>
+              <p className={`text-xs font-black uppercase tracking-wide ${verdict === "minor_difference" || verdict === "needs_manual_review" ? "text-black" : "text-white"}`}>{verdict.replace(/_/g, " ")}</p>
+              <p className={`text-3xl font-black text-black mt-1 ${verdict === "minor_difference" || verdict === "needs_manual_review" ? "text-black" : "text-white"}`}>{count as number}</p>
             </div>
           ))}
         </div>

@@ -30,7 +30,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-neo-lavender p-4">
+    <div className="min-h-screen flex items-center justify-center bg-neo-blue p-4">
       <form
         onSubmit={submit}
         className="bg-white border-4 border-black shadow-neo rounded-2xl p-8 w-full max-w-sm space-y-6"

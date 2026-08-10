@@ -5,8 +5,8 @@ import { projectsApi, Project } from "../api/client";
 import { Plus, ChevronRight } from "lucide-react";
 
 const CARD_PASTELS = [
-  "bg-neo-peach", "bg-neo-mint", "bg-neo-lavender",
-  "bg-neo-yellow", "bg-neo-pink", "bg-white",
+  "bg-neo-orange", "bg-neo-teal", "bg-neo-blue",
+  "bg-neo-yellow", "bg-neo-purple", "bg-white",
 ];
 
 export default function ProjectsPage() {
@@ -54,15 +54,15 @@ export default function ProjectsPage() {
               <Link
                 key={p.id}
                 to={`/projects/${p.id}`}
-                className={`flex items-center justify-between ${CARD_PASTELS[i % CARD_PASTELS.length]} border-4 border-black rounded-2xl px-5 py-4 shadow-neo hover:-translate-y-1 transition-transform group`}
+                className={`flex items-center justify-between ${CARD_PASTELS[i % CARD_PASTELS.length]} border-2 border-black rounded-2xl px-5 py-4 shadow-neo hover:-translate-y-1 transition-transform group`}
               >
                 <div>
-                  <p className="text-base font-black text-black">{p.name}</p>
-                  <p className="text-xs font-semibold text-gray-600 mt-0.5">
+                  <p className={`text-base font-black ${i < 3 ? "text-white" : "text-black"}`}>{p.name}</p>
+                  <p className={`text-xs font-semibold mt-0.5 ${i < 3 ? "text-white/80" : "text-gray-600"}`}>
                     {p.project_type} · GT mode: {p.gt_mode_default}
                   </p>
                 </div>
-                <ChevronRight size={18} className="text-black group-hover:translate-x-1 transition-transform" />
+                <ChevronRight size={18} className={`${i < 3 ? "text-white" : "text-black"} group-hover:translate-x-1 transition-transform`} />
               </Link>
             ))}
           </div>

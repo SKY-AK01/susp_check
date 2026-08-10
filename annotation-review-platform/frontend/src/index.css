@@ -3,17 +3,17 @@
 @tailwind utilities;
 
 :root {
-  --color-exact: #22c55e;
-  --color-minor: #facc15;
-  --color-significant: #f97316;
-  --color-missing: #ef4444;
-  --color-extra: #a855f7;
+  --color-exact: #00C9A7;
+  --color-minor: #FFD600;
+  --color-significant: #F4603A;
+  --color-missing: #FF3B30;
+  --color-extra: #7B61FF;
   --color-manual: #6b7280;
 }
 
 body {
   font-family: "Inter", system-ui, -apple-system, sans-serif;
-  background: theme('colors.neo-bg');
+  background: #FFF5F5;
   color: #111111;
   font-weight: 500;
 }

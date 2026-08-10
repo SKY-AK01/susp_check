@@ -19,8 +19,8 @@ const VERDICT_COLORS: Record<string, string> = {
   needs_manual_review:    "#94a3b8",
 };
 
-// Pastel card backgrounds cycling for the verdict summary cards
-const CARD_PASTELS = ["bg-neo-mint", "bg-neo-yellow", "bg-neo-peach", "bg-neo-lavender", "bg-neo-pink", "bg-white"];
+// Bold flat card colors cycling for verdict summary cards
+const CARD_PASTELS = ["bg-neo-teal", "bg-neo-yellow", "bg-neo-orange", "bg-neo-blue", "bg-neo-purple", "bg-white"];
 
 export default function DashboardPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -105,10 +105,10 @@ export default function DashboardPage() {
                 {Object.entries(verdictTotals).map(([v, cnt], i) => (
                   <div
                     key={v}
-                    className={`${CARD_PASTELS[i % CARD_PASTELS.length]} border-4 border-black rounded-2xl shadow-neo px-6 py-5 min-w-[150px] hover:-translate-y-1 transition-transform`}
+                    className={`${CARD_PASTELS[i % CARD_PASTELS.length]} border-2 border-black rounded-2xl shadow-neo px-6 py-5 min-w-[150px] hover:-translate-y-1 transition-transform`}
                   >
-                    <p className="text-xs font-black text-black uppercase tracking-wide">{v.replace(/_/g, " ")}</p>
-                    <p className="text-4xl font-black mt-2 text-black">{cnt}</p>
+                    <p className={`text-xs font-black uppercase tracking-wide ${i === 1 ? "text-black" : "text-white"}`}>{v.replace(/_/g, " ")}</p>
+                    <p className={`text-4xl font-black mt-2 ${i === 1 ? "text-black" : "text-white"}`}>{cnt}</p>
                   </div>
                 ))}
               </div>
@@ -158,7 +158,7 @@ export default function DashboardPage() {
               </h2>
               <div className="bg-white border-4 border-black rounded-2xl shadow-neo overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead className="bg-neo-peach border-b-4 border-black text-xs text-black uppercase font-black">
+                  <thead className="bg-neo-orange border-b-4 border-black text-xs text-white uppercase font-black">
                     <tr>
                       <th className="px-4 py-3 text-left">Reviewer</th>
                       <th className="px-4 py-3 text-right">Actions</th>
@@ -187,7 +187,7 @@ export default function DashboardPage() {
               </h2>
               <div className="bg-white border-4 border-black rounded-2xl shadow-neo overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead className="bg-neo-mint border-b-4 border-black text-xs text-black uppercase font-black">
+                  <thead className="bg-neo-teal border-b-4 border-black text-xs text-white uppercase font-black">
                     <tr>
                       <th className="px-4 py-3 text-left w-8">#</th>
                       <th className="px-4 py-3 text-left">Student</th>

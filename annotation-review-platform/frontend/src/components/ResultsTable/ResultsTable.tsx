@@ -139,7 +139,7 @@ export default function ResultsTable({ runId }: Props) {
       {data && (
         <div className="overflow-x-auto rounded-2xl border-4 border-black shadow-neo">
           <table className="w-full text-sm text-left">
-            <thead className="bg-neo-peach border-b-4 border-black text-xs text-black uppercase font-black">
+            <thead className="bg-neo-orange border-b-4 border-black text-xs text-white uppercase font-black">
               <tr>
                 <th className="px-3 py-3 w-8">
                   <input

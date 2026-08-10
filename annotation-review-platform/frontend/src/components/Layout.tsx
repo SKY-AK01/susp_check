@@ -12,9 +12,9 @@ export default function Layout() {
   return (
     <div className="flex h-screen bg-neo-bg">
       {/* Sidebar */}
-      <aside className="w-56 bg-white border-r-4 border-black flex flex-col">
-        <div className="p-4 border-b-4 border-black">
-          <span className="text-sm font-black text-black uppercase tracking-widest">
+      <aside className="w-56 bg-white border-r-2 border-black flex flex-col shadow-[2px_0px_0px_0px_rgba(0,0,0,1)]">
+        <div className="p-4 border-b-2 border-black bg-black">
+          <span className="text-sm font-black text-white uppercase tracking-widest">
             Annotation Review
           </span>
         </div>
@@ -22,20 +22,20 @@ export default function Layout() {
           <NavLink
             to="/projects"
             className={({ isActive }) =>
-              `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold border-2 transition-all ${
+              `flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-black border-2 transition-all ${
                 isActive
-                  ? "bg-neo-lavender border-black shadow-neo-sm text-black"
-                  : "border-transparent text-gray-600 hover:bg-neo-peach hover:border-black hover:shadow-neo-sm hover:text-black"
+                  ? "bg-neo-blue border-black shadow-neo-sm text-white"
+                  : "border-transparent text-gray-600 hover:bg-neo-yellow hover:border-black hover:shadow-neo-sm hover:text-black"
               }`
             }
           >
             <FolderOpen size={16} /> Projects
           </NavLink>
         </nav>
-        <div className="p-3 border-t-4 border-black">
+        <div className="p-3 border-t-2 border-black">
           <button
             onClick={logout}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold border-2 border-transparent text-gray-600 hover:bg-neo-pink hover:border-black hover:shadow-neo-sm hover:text-black w-full transition-all"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-black border-2 border-transparent text-gray-600 hover:bg-neo-red hover:border-black hover:shadow-neo-sm hover:text-white w-full transition-all"
           >
             <LogOut size={16} /> Sign out
           </button>

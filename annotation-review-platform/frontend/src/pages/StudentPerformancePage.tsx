@@ -21,7 +21,7 @@ const VERDICT_COLORS: Record<string, string> = {
   needs_manual_review:    "#6b7280",
 };
 
-const STAT_PASTELS = ["bg-neo-peach", "bg-neo-mint", "bg-neo-lavender", "bg-neo-yellow"];
+const STAT_PASTELS = ["bg-neo-orange", "bg-neo-teal", "bg-neo-blue", "bg-neo-yellow"];
 
 export default function StudentPerformancePage() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -102,21 +102,21 @@ export default function StudentPerformancePage() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <StatCard label="Total Runs" value={total_runs} icon={<TrendingUp size={14} />} bg={STAT_PASTELS[0]} />
-        <StatCard label="Images Reviewed" value={total_images_reviewed} icon={<ImageIcon size={14} />} bg={STAT_PASTELS[1]} />
+        <StatCard label="Total Runs" value={total_runs} icon={<TrendingUp size={14} />} bg={STAT_PASTELS[0]} valueColor="white" />
+        <StatCard label="Images Reviewed" value={total_images_reviewed} icon={<ImageIcon size={14} />} bg={STAT_PASTELS[1]} valueColor="white" />
         <StatCard
           label="Exact Matches"
           value={latest_verdicts.exact_match}
           icon={<Target size={14} />}
           bg={STAT_PASTELS[2]}
-          valueColor="#16a34a"
+          valueColor="white"
         />
         <StatCard
           label="Needs Rework"
           value={latest_verdicts.missing + latest_verdicts.significant_difference}
           icon={<Target size={14} />}
           bg={STAT_PASTELS[3]}
-          valueColor="#dc2626"
+          valueColor="black"
         />
       </div>
 
@@ -173,8 +173,8 @@ export default function StudentPerformancePage() {
       {/* Per-run history table */}
       {run_history.length > 0 && (
         <div className="bg-white border-4 border-black rounded-2xl shadow-neo overflow-hidden">
-          <div className="px-5 py-3 border-b-4 border-black bg-neo-peach">
-            <p className="text-xs font-black text-black uppercase tracking-wider">
+          <div className="px-5 py-3 border-b-4 border-black bg-neo-orange">
+            <p className="text-xs font-black text-white uppercase tracking-wider">
               Run History
             </p>
           </div>
@@ -249,7 +249,7 @@ export default function StudentPerformancePage() {
 }
 
 function StatCard({
-  label, value, icon, bg = "bg-white", valueColor = "#111",
+  label, value, icon, bg = "bg-white", valueColor = "black",
 }: {
   label: string;
   value: number;
@@ -257,13 +257,14 @@ function StatCard({
   bg?: string;
   valueColor?: string;
 }) {
+  const isLight = valueColor === "black";
   return (
-    <div className={`${bg} border-4 border-black rounded-2xl px-4 py-4 shadow-neo`}>
-      <div className="flex items-center gap-2 text-black text-xs font-black mb-2 uppercase tracking-wider">
+    <div className={`${bg} border-2 border-black rounded-2xl px-4 py-4 shadow-neo`}>
+      <div className={`flex items-center gap-2 text-xs font-black mb-2 uppercase tracking-wider ${isLight ? "text-black" : "text-white/80"}`}>
         {icon}
         <span>{label}</span>
       </div>
-      <p className="text-3xl font-black font-mono" style={{ color: valueColor }}>{value}</p>
+      <p className={`text-3xl font-black font-mono ${isLight ? "text-black" : "text-white"}`}>{value}</p>
     </div>
   );
 }

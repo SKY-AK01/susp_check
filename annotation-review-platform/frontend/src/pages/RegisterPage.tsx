@@ -59,10 +59,10 @@ export default function RegisterPage() {
   /* ── Success screen ─────────────────────────────────────────── */
   if (step === "success") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neo-mint p-4">
+      <div className="min-h-screen flex items-center justify-center bg-neo-teal p-4">
         <div className="bg-white border-4 border-black rounded-2xl shadow-neo p-10 w-full max-w-sm text-center space-y-6">
           <div className="flex justify-center">
-            <div className="w-16 h-16 rounded-full bg-neo-mint border-4 border-black flex items-center justify-center shadow-neo-sm">
+            <div className="w-16 h-16 rounded-full bg-neo-teal border-2 border-black flex items-center justify-center shadow-neo-sm">
               <svg className="w-8 h-8 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
@@ -87,7 +87,7 @@ export default function RegisterPage() {
 
   /* ── Registration form ──────────────────────────────────────── */
   return (
-    <div className="min-h-screen flex items-center justify-center bg-neo-lavender p-4">
+    <div className="min-h-screen flex items-center justify-center bg-neo-blue p-4">
       <div className="bg-white border-4 border-black rounded-2xl shadow-neo p-8 w-full max-w-md space-y-6">
         {/* Header */}
         <div className="text-center">
